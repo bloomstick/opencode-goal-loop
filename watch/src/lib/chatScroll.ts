@@ -36,6 +36,16 @@ export function shouldStickToBottom(
   return isNearBottom(metrics, threshold);
 }
 
+/**
+ * True-bottom scroll offset: the maximum `scrollTop` (content bottom flush
+ * with the viewport bottom). Snapping to raw `scrollHeight` overshoots by
+ * exactly one viewport, which some engines resolve short of the bottom on
+ * long messages - always snap here instead.
+ */
+export function bottomScrollTop(metrics: ChatScrollMetrics): number {
+  return Math.max(0, metrics.scrollHeight - metrics.clientHeight);
+}
+
 /** Reduced-motion guard for the smooth-scroll follow (SSR/jsdom safe). */
 export function prefersReducedMotion(): boolean {
   try {

@@ -97,6 +97,28 @@ function setAssistant(
 }
 
 /**
+ * Chronological order (oldest top / newest bottom).
+ *
+ * Neither the `message.list` payload order nor the live event arrival order
+ * is trusted for display: ingest sorts once and the `selectedMessages`
+ * derivation in `App.tsx` sorts again, so late/out-of-order events can never
+ * flip the pane newest-first. Stable: equal stamps keep insertion order, and
+ * unparseable stamps sink last instead of scattering. Pure.
+ */
+export function chatCreatedMs(message: ChatMessage): number {
+  const at = Date.parse(message.createdAt);
+  return Number.isFinite(at) ? at : Number.MAX_SAFE_INTEGER;
+}
+
+export function compareChatChronological(a: ChatMessage, b: ChatMessage): number {
+  return chatCreatedMs(a) - chatCreatedMs(b);
+}
+
+export function sortChatChronological(list: ChatMessage[]): ChatMessage[] {
+  return [...list].sort(compareChatChronological);
+}
+
+/**
  * Fold one watch event into chat state. Pure: unknown shapes are ignored and
  * untouched rows keep referential identity (memo-safe streaming). Only the
  * watched session folds; other sessions pass through untouched.

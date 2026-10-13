@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.3]
+
+* Chat fixes: chronological order, true-bottom follow, centered watching
+  dot, letter-avatar badges + WIP pulse. No behavior changes otherwise.
+
+## [0.1.2]
+
+* Rename Dispatch to Watch: window title + productName to Watch,
+  identifier to `ai.watch.app`, npm + Cargo package names to `watch`
+  (bundle output becomes `Watch_*.exe`/MSI; fresh app identity, so 0.1.x
+  installs under the old id will not auto-upgrade). Release workflow
+  actions past Node 20 (`actions/checkout` + `actions/setup-node` v4 to
+  v5, `softprops/action-gh-release` v2 to v3).
+
+## [0.1.1]
+
+* Chat list polish: session cards (no bullets, ellipsis titles with hover,
+  selected accent + watching marker), live badge dot, pulsing running tool
+  dot; dead CSS for removed components pruned. No behavior changes.
+
 ## [Unreleased]
 
 * Watch-only shell cut: sidecar keeps only `opencode_service_endpoint` (git/gh/store/screenshot commands removed; live chat runs over @opencode/client SSE), `scripts/` deleted with the `probe`/`live-proof`/`vision-review`/`vision-diff` npm scripts and the `tsx` devDep, `docs/` replaced by `docs/WATCH.md`, README slimmed to watcher-only, `index.html` title to Watch, `TO-DO.md` and `opencode.json` deleted. Attended-only: closing the window stops everything, no background state.
