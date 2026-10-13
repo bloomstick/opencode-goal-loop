@@ -4,11 +4,13 @@ Fully automated coding loop for OpenCode — **no plugins, no hooks, no server
 code**. A `/goal` command plus `goal-orch` / `goal-worker` agents plus the
 `goal-loop` skill, all plain Markdown. Nothing to crash the service.
 
-Why: `prevalentWare/opencode-goal-plugin` restarted the OpenCode server 3
-times on 2026-10-12 via server-held background `opencode run` children, and
-`william-ricchiuti/OpenCode-goal-plugin#81` reports silent service death on
-`0.11.0`. This loop never auto-continues via hooks, never backgrounds
-`opencode run`, and keeps state in one plain `reqs-manifest.md` per goal —
+Why: the service log shows `opencode-goal-plugin@0.11.0`
+(`william-ricchiuti/OpenCode-goal-plugin#81`, silent service death) loaded on
+2026-10-10; there is no trace of the `prevalentWare` variant ever being
+installed (no log lines, no state file). Separately, server-held background
+`opencode run` children restarted the server 3 times on 2026-10-12 (see the
+`delegate` skill). This loop avoids all three: no hooks/auto-continue, no
+background `opencode run`, and keeps state in one plain `reqs-manifest.md` per goal —
 no lock/lease/claim files.
 
 Free-tier safe: the `task` (subagent) tool is denied in both agents. All

@@ -7,10 +7,12 @@ description: Fully automated coding loop for OpenCode without plugins. Use when 
 
 Markdown-only replacement for `opencode-goal-plugin` variants. There is no
 TypeScript, no hooks, no server code — so there is nothing to crash the
-OpenCode service. History: `prevalentWare/opencode-goal-plugin` restarted
-the server 3 times on 2026-10-12 via server-held background `opencode run`
-children; `william-ricchiuti/OpenCode-goal-plugin#81` reports silent service
-death on 0.11.0. This skill never does either of those things.
+OpenCode service. History: the service log shows `opencode-goal-plugin@0.11.0`
+(`william-ricchiuti/OpenCode-goal-plugin#81`, silent service death) loaded on
+2026-10-10; no trace of the `prevalentWare` variant ever installed.
+Separately, server-held background `opencode run` children restarted the
+server 3 times on 2026-10-12. This skill avoids all three: no hooks, no
+background children, plain-manifest state only.
 
 Free-tier constraint: the `task` tool (subagents) is unavailable. All child
 work runs as foreground `opencode run` processes, never as subagents.
