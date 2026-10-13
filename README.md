@@ -22,6 +22,9 @@ child work runs as foreground `opencode run` processes.
 - `agents/goal-orch.md`, `agents/goal-worker.md` → global `agents/`
 - `skills/goal-loop/SKILL.md` → global `skills/goal-loop/` (canonical spec)
 - `scripts/Install-GoalLoop.ps1` — clone/pull + copy installer
+- `watch/` — optional attended watcher: cut-down `bloomstick/dispatch`
+  (`feat/watch-only`) showing only the live session list + worker chat.
+  Not installed by the script; run separately (see `watch/docs/WATCH.md`).
 
 ## Install / update
 

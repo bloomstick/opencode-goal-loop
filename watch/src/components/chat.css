@@ -1,0 +1,1087 @@
+/* Dispatch application styles (P-DSP-30: from scaffolding to designed).
+ *
+ * Every value comes from `tokens.css` (`var(--dsp-*)`) - this file holds
+ * ZERO color/spacing literals (pinned by test). Themes arrive via
+ * `[data-theme]` on `<main>` + each themed section, with the OS
+ * `prefers-color-scheme` fallback for un-themed roots (see tokens.css).
+ * System font stack only (no webfont dependency).
+ */
+
+/* ---- app shell ---------------------------------------------------- */
+
+.dsp-app {
+  font-family: system-ui, sans-serif;
+  padding: var(--dsp-sp-5);
+  max-width: 1600px;
+  margin: 0 auto;
+  color: var(--dsp-fg);
+  background: var(--dsp-bg);
+  font-size: var(--dsp-fs-base);
+  line-height: 1.5;
+}
+
+.dsp-app h1 {
+  font-size: var(--dsp-fs-title);
+  line-height: 1.2;
+  margin: 0 0 var(--dsp-sp-2);
+  letter-spacing: -0.01em;
+}
+
+.dsp-app h2 {
+  font-size: var(--dsp-fs-lg);
+  line-height: 1.3;
+  margin: var(--dsp-sp-5) 0 var(--dsp-sp-2);
+}
+
+.dsp-app p {
+  margin: 0 0 var(--dsp-sp-2);
+  max-width: 110ch;
+}
+
+.dsp-app code,
+.dsp-app pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ---- buttons: one hierarchy (primary / danger / ghost) ------------ */
+
+.dsp-app button,
+.dsp-app input,
+.dsp-app select,
+.dsp-app textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.dsp-app button {
+  cursor: pointer;
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-sm);
+  background: var(--dsp-surface);
+  color: var(--dsp-fg);
+  padding: var(--dsp-sp-1) var(--dsp-sp-3);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.dsp-app button:hover:not(:disabled) {
+  border-color: var(--dsp-accent);
+}
+
+.dsp-app button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dsp-btn-primary {
+  background: var(--dsp-accent) !important;
+  border-color: transparent !important;
+  color: var(--dsp-bg) !important;
+  font-weight: 600;
+}
+
+[data-theme="light"] .dsp-btn-primary {
+  color: var(--dsp-surface) !important;
+}
+
+.dsp-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.dsp-btn-danger {
+  border-color: var(--dsp-danger) !important;
+  color: var(--dsp-danger) !important;
+  background: transparent !important;
+  font-weight: 600;
+}
+
+.dsp-btn-danger:hover:not(:disabled) {
+  background: var(--dsp-danger) !important;
+  color: var(--dsp-surface) !important;
+}
+
+[data-theme="dark"] .dsp-btn-danger:hover:not(:disabled) {
+  color: var(--dsp-bg) !important;
+}
+
+.dsp-btn-ghost {
+  background: transparent !important;
+}
+
+/* ---- inputs / selects / textareas: one treatment ------------------ */
+
+.dsp-app input:not([type="checkbox"]),
+.dsp-app select,
+.dsp-app textarea {
+  background: var(--dsp-surface);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-sm);
+  padding: var(--dsp-sp-1) var(--dsp-sp-2);
+}
+
+.dsp-app input::placeholder,
+.dsp-app textarea::placeholder {
+  color: var(--dsp-muted);
+}
+
+/* ---- focus: visible ring on ALL interactives ----------------------- */
+
+.dsp-app button:focus-visible,
+.dsp-app input:focus-visible,
+.dsp-app select:focus-visible,
+.dsp-app textarea:focus-visible,
+.dsp-app a:focus-visible {
+  outline: var(--dsp-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---- chat ---------------------------------------------------------- */
+
+.dsp-chat,
+.dsp-runs,
+.dsp-board {
+  color: var(--dsp-fg);
+  background: var(--dsp-surface);
+}
+
+.dsp-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-3);
+  padding: var(--dsp-sp-3);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  background: var(--dsp-surface);
+}
+
+.dsp-msg {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-2) var(--dsp-sp-3);
+  background: var(--dsp-surface);
+}
+
+.dsp-msg-assistant {
+  background: var(--dsp-surface-2);
+}
+
+.dsp-msg-head {
+  display: flex;
+  gap: var(--dsp-sp-2);
+  align-items: baseline;
+  margin-bottom: var(--dsp-sp-1);
+}
+
+.dsp-role {
+  font-weight: 700;
+  font-size: var(--dsp-fs-sm);
+  text-transform: capitalize;
+}
+
+.dsp-msg-user .dsp-role {
+  color: var(--dsp-accent-ink);
+}
+
+.dsp-time {
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dsp-msg-text {
+  font-size: var(--dsp-fs-base);
+  overflow-wrap: anywhere;
+}
+
+.dsp-reasoning-toggle {
+  background: transparent !important;
+  border: 1px solid var(--dsp-border) !important;
+  border-radius: var(--dsp-r-sm) !important;
+  color: var(--dsp-muted) !important;
+  cursor: pointer;
+  padding: var(--dsp-sp-1) var(--dsp-sp-2) !important;
+  margin-top: var(--dsp-sp-2);
+  font-size: var(--dsp-fs-sm) !important;
+}
+
+.dsp-reasoning-toggle:hover {
+  color: var(--dsp-accent-ink) !important;
+  border-color: var(--dsp-accent) !important;
+}
+
+.dsp-reasoning-body {
+  margin-top: var(--dsp-sp-1);
+  padding: var(--dsp-sp-2);
+  background: var(--dsp-code-bg);
+  border-radius: var(--dsp-r-sm);
+  white-space: pre-wrap;
+  font-size: var(--dsp-fs-sm);
+  border-left: 2px solid var(--dsp-accent);
+}
+
+.dsp-tools {
+  list-style: none;
+  padding: 0;
+  margin: var(--dsp-sp-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-1);
+}
+
+.dsp-tool {
+  display: flex;
+  gap: var(--dsp-sp-2);
+  align-items: baseline;
+  font-size: var(--dsp-fs-sm);
+}
+
+.dsp-tool-input {
+  color: var(--dsp-muted);
+}
+
+.dsp-diff {
+  margin-top: var(--dsp-sp-2);
+}
+
+.dsp-diff-path {
+  font-weight: 600;
+  font-size: var(--dsp-fs-sm);
+  margin-bottom: var(--dsp-sp-1);
+}
+
+.dsp-diff-body {
+  background: var(--dsp-code-bg);
+  border: 1px solid var(--dsp-border);
+  padding: var(--dsp-sp-2);
+  border-radius: var(--dsp-r-sm);
+  overflow-x: auto;
+  font-size: var(--dsp-fs-xs);
+  line-height: 1.6;
+}
+
+.dsp-add { color: var(--dsp-add); }
+.dsp-del { color: var(--dsp-del); }
+.dsp-ctx { color: var(--dsp-muted); }
+
+/* ---- runs ---------------------------------------------------------- */
+
+.dsp-runs {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  padding: var(--dsp-sp-3);
+  background: var(--dsp-surface);
+}
+
+.dsp-runs ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-2);
+}
+
+.dsp-run {
+  display: flex;
+  align-items: center;
+  gap: var(--dsp-sp-2);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-2);
+  background: var(--dsp-surface);
+}
+
+.dsp-run[data-selected="true"] {
+  border-color: var(--dsp-accent);
+  background: var(--dsp-accent-soft);
+}
+
+.dsp-run-select {
+  flex: 1;
+  min-width: 0;
+  background: transparent !important;
+  border: none !important;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+}
+
+.dsp-run-title {
+  overflow-wrap: anywhere;
+  font-size: var(--dsp-fs-sm);
+  font-weight: 600;
+}
+
+.dsp-run-meta {
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-xs);
+  overflow-wrap: anywhere;
+}
+
+.dsp-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dsp-dot-idle);
+  flex-shrink: 0;
+}
+
+.dsp-dot[data-status="running"] { background: var(--dsp-dot-running); }
+.dsp-dot[data-status="idle"] { background: var(--dsp-dot-idle); }
+.dsp-dot[data-status="done"] { background: var(--dsp-dot-done); }
+.dsp-dot[data-status="error"] { background: var(--dsp-dot-error); }
+.dsp-dot[data-status="killed"] { background: var(--dsp-dot-killed); }
+
+.dsp-kill {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.dsp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dsp-sp-1) var(--dsp-sp-3);
+  margin: var(--dsp-sp-2) 0 0;
+  padding: 0;
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-xs);
+}
+
+.dsp-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dsp-sp-1);
+}
+
+/* ---- board ---------------------------------------------------------- */
+
+.dsp-board {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  padding: var(--dsp-sp-3);
+  margin-top: var(--dsp-sp-4);
+  background: var(--dsp-surface);
+}
+
+.dsp-board-main {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(var(--dsp-board-col-min), 1fr));
+  gap: var(--dsp-sp-3);
+  overflow-x: auto;
+  padding-bottom: var(--dsp-sp-1);
+}
+
+.dsp-board-attention {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--dsp-board-col-min), 1fr));
+  gap: var(--dsp-sp-3);
+  margin-top: var(--dsp-sp-3);
+  border-top: 1px dashed var(--dsp-border);
+  padding-top: var(--dsp-sp-3);
+  overflow-x: auto;
+}
+
+.dsp-board-column {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-2);
+  min-height: 80px;
+  background: var(--dsp-bg);
+}
+
+/* Density (P-DSP-33): empty lanes collapse to a one-line header row - the
+ * count stays in the header, the card space is returned. */
+.dsp-board-column[data-empty="true"] {
+  min-height: 0;
+  padding-top: var(--dsp-sp-1);
+  padding-bottom: var(--dsp-sp-1);
+}
+
+.dsp-board-column[data-empty="true"] .dsp-board-head {
+  margin: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dsp-board-column[data-empty="true"] .dsp-board-cards {
+  display: none;
+}
+
+.dsp-board-head {
+  margin: 0 0 var(--dsp-sp-2);
+  font-size: var(--dsp-fs-sm);
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--dsp-muted);
+  border-bottom: 2px solid var(--dsp-border);
+  padding-bottom: var(--dsp-sp-1);
+}
+
+.dsp-board-column[data-status="ready"] .dsp-board-head {
+  border-bottom-color: var(--dsp-success);
+}
+
+.dsp-board-column[data-status="in-progress"] .dsp-board-head {
+  border-bottom-color: var(--dsp-accent);
+}
+
+.dsp-board-column[data-status="in-review"] .dsp-board-head {
+  border-bottom-color: var(--dsp-dot-done);
+}
+
+.dsp-board-column[data-status="done"] .dsp-board-head {
+  border-bottom-color: var(--dsp-success);
+}
+
+.dsp-board-column[data-status="needs-fix"] .dsp-board-head,
+.dsp-board-column[data-status="blocked-human"] .dsp-board-head {
+  border-bottom-color: var(--dsp-danger);
+}
+
+.dsp-board-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-2);
+}
+
+.dsp-board-card {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-2);
+  background: var(--dsp-surface);
+  border-left: 3px solid var(--dsp-border);
+}
+
+.dsp-board-card[data-status="ready"] { border-left-color: var(--dsp-success); }
+.dsp-board-card[data-status="in-progress"] { border-left-color: var(--dsp-accent); }
+.dsp-board-card[data-status="in-review"] { border-left-color: var(--dsp-dot-done); }
+.dsp-board-card[data-status="done"] { border-left-color: var(--dsp-success); }
+.dsp-board-card[data-status="needs-fix"] { border-left-color: var(--dsp-danger); }
+.dsp-board-card[data-status="blocked-human"] { border-left-color: var(--dsp-danger); }
+
+.dsp-board-card[data-selected="true"] {
+  outline: var(--dsp-focus-ring);
+  outline-offset: 1px;
+  background: var(--dsp-accent-soft);
+}
+
+.dsp-board-select {
+  background: transparent !important;
+  border: none !important;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-1);
+  width: 100%;
+  padding: 0 !important;
+}
+
+.dsp-board-code {
+  font-weight: 700;
+  font-size: var(--dsp-fs-sm);
+  color: var(--dsp-accent-ink);
+  /* Task codes never break mid-word and never get cut with "..." in the
+   * lane: they hold as one unit (nowrap here) while the lanes scroll
+   * instead of squeezing. */
+  white-space: nowrap;
+  overflow: visible;
+}
+
+/* Density (P-DSP-33): dispatch buttons wrap between words instead of
+ * truncating the task code mid-label. */
+.dsp-topbar-controls button,
+.dsp-unstarted .dsp-btn {
+  min-width: max-content;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.dsp-board-title {
+  font-size: var(--dsp-fs-sm);
+  overflow-wrap: anywhere;
+}
+
+/* Repo slug chip (P-DSP-36): small muted marker on Board cards + RunList
+ * rows in the All scope only (hidden when filtered to one repo). Slug text
+ * is verbatim; overflow truncates with an ellipsis while `title` hover
+ * carries the full slug. */
+.dsp-repo-chip {
+  display: inline-block;
+  align-self: flex-start;
+  max-width: 100%;
+  color: var(--dsp-muted);
+  background: var(--dsp-surface-2);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-sm);
+  font-size: var(--dsp-fs-xs);
+  padding: 0 var(--dsp-sp-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- panels (autopilot / self-improve / architect / repos) --------- */
+
+.dsp-panel {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  padding: var(--dsp-sp-3);
+  margin-top: var(--dsp-sp-4);
+  background: var(--dsp-surface);
+}
+
+.dsp-panel ol {
+  padding-left: var(--dsp-sp-5);
+  margin: 0 0 var(--dsp-sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-2);
+}
+
+.dsp-panel pre {
+  background: var(--dsp-code-bg);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-sm);
+  padding: var(--dsp-sp-2);
+  overflow-x: auto;
+  font-size: var(--dsp-fs-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dsp-panel textarea {
+  min-height: 64px;
+  width: min(100%, 640px);
+  vertical-align: top;
+}
+
+/* Architect composer: label stacks above its tall textarea instead of
+ * bottom-aligning beside it (v2 after-verdict alignment finding). */
+.dsp-panel label:has([aria-label="architect composer"]) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-1);
+  align-items: flex-start;
+  margin-bottom: var(--dsp-sp-2);
+}
+
+.dsp-panel label {
+  font-size: var(--dsp-fs-sm);
+}
+
+/* ---- empty states --------------------------------------------------- */
+
+.dsp-board [data-testid="board-empty"],
+.dsp-runs [data-testid="runs-empty"] {
+  color: var(--dsp-muted);
+  background: var(--dsp-surface-2);
+  border: 1px dashed var(--dsp-border);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-3);
+  font-size: var(--dsp-fs-sm);
+  margin: 0;
+}
+
+/* Density (P-DSP-33): the empty chat is a compact single line, not a panel. */
+.dsp-chat [data-testid="chat-empty"] {
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-sm);
+  margin: 0;
+  padding: 0;
+}
+
+/* Empty-board breathing room (P-DSP-34): the "No cards yet" notice keeps
+ * token spacing below it so the columns grid never touches the copy. */
+.dsp-board .dsp-board-empty {
+  margin-bottom: var(--dsp-sp-4);
+}
+
+/* Filter-row breathing room (P-DSP-35): the repo filter row keeps the same
+ * token spacing below it so the columns grid never sits flush against it.
+ * Block-level so the bottom margin takes effect on the label. */
+.dsp-board .dsp-board-filter {
+  display: block;
+  margin-bottom: var(--dsp-sp-4);
+}
+
+/* ---- density: one-line intros + About overflow (P-DSP-33) ------------- */
+
+.dsp-intro {
+  font-size: var(--dsp-fs-sm);
+  color: var(--dsp-muted);
+  margin: 0 0 var(--dsp-sp-1);
+}
+
+.dsp-about {
+  font-size: var(--dsp-fs-sm);
+  color: var(--dsp-muted);
+  margin: 0 0 var(--dsp-sp-2);
+}
+
+.dsp-about > summary {
+  cursor: pointer;
+}
+
+/* TopBar single meta line (P-DSP-33): scope + live state, one row. */
+.dsp-meta-line {
+  font-size: var(--dsp-fs-sm);
+  color: var(--dsp-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- unstarted card -------------------------------------------------- */
+
+.dsp-unstarted {
+  border: 1px solid var(--dsp-border);
+  border-left: 3px solid var(--dsp-accent);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-3);
+  background: var(--dsp-surface);
+  margin-bottom: var(--dsp-sp-3);
+}
+
+.dsp-unstarted h3 {
+  margin: 0 0 var(--dsp-sp-1);
+  font-size: var(--dsp-fs-base);
+}
+
+.dsp-unstarted-meta {
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-sm);
+  margin: 0 0 var(--dsp-sp-2);
+}
+
+.dsp-unstarted-excerpt {
+  font-size: var(--dsp-fs-sm);
+  background: var(--dsp-surface-2);
+  border-radius: var(--dsp-r-sm);
+  padding: var(--dsp-sp-2);
+  overflow-wrap: anywhere;
+}
+
+.dsp-unstarted-note {
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-sm);
+}
+
+/* P-DSP-21 vision-clipping fixes (kept): nothing clips under the title bar
+ * or off the right edge on narrow windows. The repos add-row wraps (inputs
+ * never force horizontal overflow), the run/chat grid floors its columns at
+ * minmax(0, ...) and stacks under ~720px, and the heartbeat dot is a real
+ * inline-block box with a status color (spans ignore width/height inline). */
+.dsp-repos-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dsp-sp-2);
+  align-items: center;
+  max-width: 100%;
+  margin-top: var(--dsp-sp-2);
+}
+
+/* Repos registry rows (P-DSP-34): one clean row per repo - slug + truncated
+ * path (full path on hover) + self badge + compact remove. The path never
+ * wraps mid-string: it truncates with an ellipsis while the row keeps its
+ * single line. */
+.dsp-repos-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--dsp-sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-2);
+}
+
+.dsp-repo-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dsp-sp-2);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-md);
+  padding: var(--dsp-sp-1) var(--dsp-sp-2);
+  background: var(--dsp-surface);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dsp-repo-slug {
+  font-weight: 700;
+  font-size: var(--dsp-fs-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dsp-repo-path {
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.dsp-repo-self {
+  font-size: var(--dsp-fs-xs);
+  font-weight: 700;
+  color: var(--dsp-accent-ink);
+  background: var(--dsp-accent-soft);
+  border: 1px solid var(--dsp-accent);
+  border-radius: var(--dsp-r-sm);
+  padding: 0 var(--dsp-sp-1);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dsp-repo-remove {
+  flex-shrink: 0;
+  padding: 0 var(--dsp-sp-1) !important;
+  font-size: var(--dsp-fs-xs) !important;
+  white-space: nowrap;
+}
+
+.dsp-main-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: var(--dsp-sp-4);
+  margin-top: var(--dsp-sp-4);
+}
+
+.dsp-chat-pane {
+  min-width: 0;
+}
+
+/* ---- heartbeat ------------------------------------------------------- */
+
+.dsp-heartbeat {
+  display: flex;
+  align-items: center;
+  gap: var(--dsp-sp-2);
+  margin-top: var(--dsp-sp-4);
+  font-size: var(--dsp-fs-sm);
+  color: var(--dsp-muted);
+}
+
+.dsp-heartbeat-dot {
+  animation: dsp-pulse 2s ease-in-out infinite;
+}
+
+.dsp-heartbeat-dot[data-status="running"] { background: var(--dsp-dot-running); }
+.dsp-heartbeat-dot[data-status="error"] { background: var(--dsp-dot-error); }
+
+@keyframes dsp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ---- app shell (P-DSP-32: TopBar + rail + stacked center) ------------- */
+
+.dsp-shell {
+  max-width: none;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dsp-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--dsp-surface);
+  border-bottom: 1px solid var(--dsp-border);
+  padding: var(--dsp-sp-3) var(--dsp-sp-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dsp-sp-2) var(--dsp-sp-4);
+  align-items: center;
+}
+
+.dsp-brand {
+  display: flex;
+  gap: var(--dsp-sp-3);
+  align-items: center;
+  min-width: 0;
+}
+
+/* Product mark: dark square + amber bar (pure CSS, no image, no emoji). */
+.dsp-mark {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--dsp-r-sm);
+  background: var(--dsp-fg);
+  border-left: 5px solid var(--dsp-accent);
+  flex-shrink: 0;
+}
+
+.dsp-brand-text h1 {
+  margin: 0;
+}
+
+.dsp-brand-text p {
+  margin: 0;
+  font-size: var(--dsp-fs-sm);
+  color: var(--dsp-muted);
+}
+
+.dsp-topbar-controls {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dsp-sp-2);
+  align-items: center;
+}
+
+.dsp-topbar-controls label {
+  font-size: var(--dsp-fs-sm);
+}
+
+.dsp-topbar-status {
+  flex-basis: 100%;
+}
+
+.dsp-topbar-status p {
+  margin: 0 0 var(--dsp-sp-1);
+}
+
+.dsp-body {
+  display: grid;
+  grid-template-columns: var(--dsp-rail-w) minmax(0, 1fr);
+  gap: var(--dsp-sp-4);
+  padding: var(--dsp-sp-4);
+  align-items: start;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.dsp-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-4);
+  min-width: 0;
+  min-height: 0;
+}
+
+.dsp-rail h2 {
+  margin-top: 0;
+}
+
+.dsp-rail .dsp-panel {
+  margin-top: 0;
+}
+
+.dsp-accordion {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  background: var(--dsp-surface);
+  padding: var(--dsp-sp-2) var(--dsp-sp-3);
+}
+
+.dsp-accordion > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--dsp-fs-base);
+  padding: var(--dsp-sp-1) 0;
+}
+
+.dsp-accordion .dsp-panel {
+  border: none;
+  padding: var(--dsp-sp-2) 0 0;
+}
+
+.dsp-main-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-4);
+}
+
+.dsp-main-col .dsp-board {
+  margin-top: 0;
+}
+
+.dsp-main-col .dsp-panel {
+  margin-top: 0;
+}
+
+/* Center session block (P-DSP-32): static stacked section, no overlay. */
+.dsp-session {
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  background: var(--dsp-surface);
+  padding: var(--dsp-sp-3);
+  min-width: 0;
+}
+
+/* ---- run workspace (center session block) ---------------------------- */
+
+.dsp-workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dsp-sp-2);
+  flex-wrap: wrap;
+}
+
+.dsp-workspace-title {
+  display: flex;
+  align-items: center;
+  gap: var(--dsp-sp-2);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.dsp-workspace-actions {
+  display: flex;
+  gap: var(--dsp-sp-2);
+  align-items: center;
+}
+
+.dsp-workspace-beat {
+  margin-top: var(--dsp-sp-2);
+}
+
+.dsp-workspace-beat .dsp-heartbeat {
+  margin-top: 0;
+}
+
+.dsp-tabs {
+  display: flex;
+  gap: var(--dsp-sp-1);
+  border-bottom: 1px solid var(--dsp-border);
+  margin-top: var(--dsp-sp-3);
+}
+
+.dsp-tab {
+  border: 1px solid transparent !important;
+  border-bottom: none !important;
+  border-radius: var(--dsp-r-sm) var(--dsp-r-sm) 0 0 !important;
+  background: transparent !important;
+  color: var(--dsp-muted) !important;
+  font-size: var(--dsp-fs-sm);
+  font-weight: 600;
+}
+
+.dsp-tab[data-active="true"] {
+  color: var(--dsp-accent-ink) !important;
+  border-color: var(--dsp-border) !important;
+  background: var(--dsp-surface-2) !important;
+}
+
+.dsp-workspace [role="tabpanel"] {
+  padding-top: var(--dsp-sp-3);
+  min-width: 0;
+}
+
+.dsp-workspace pre {
+  background: var(--dsp-code-bg);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-sm);
+  padding: var(--dsp-sp-2);
+  overflow-x: auto;
+  font-size: var(--dsp-fs-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---- chat scroll + jump-to-latest + diff toggles --------------------- */
+
+.dsp-chat {
+  position: relative;
+}
+
+.dsp-chat-follow {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dsp-chat-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dsp-sp-3);
+  overflow-y: auto;
+  max-height: var(--dsp-chat-max-h);
+  min-height: 0;
+}
+
+.dsp-jump {
+  position: sticky;
+  bottom: var(--dsp-sp-2);
+  align-self: center;
+}
+
+.dsp-diff-toggle {
+  background: transparent !important;
+  border: none !important;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  gap: var(--dsp-sp-2);
+  align-items: baseline;
+  padding: 0 !important;
+  font-size: var(--dsp-fs-sm);
+  font-weight: 600;
+}
+
+/* ---- responsive: dense devtool stacks narrow -------------------------- */
+
+@media (max-width: 1100px) {
+  .dsp-board-main {
+    grid-template-columns: repeat(2, minmax(var(--dsp-board-col-min), 1fr));
+  }
+
+  /* Rail collapses above the center column under ~1100px. */
+  .dsp-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .dsp-app {
+    padding: var(--dsp-sp-3);
+  }
+
+  .dsp-shell {
+    padding: 0;
+  }
+
+  .dsp-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dsp-topbar-controls {
+    margin-left: 0;
+  }
+
+  .dsp-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dsp-board-main,
+  .dsp-board-attention {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- accessibility floor: no motion when asked ------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .dsp-app *,
+  .dsp-app *::before,
+  .dsp-app *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

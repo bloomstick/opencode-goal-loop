@@ -1,0 +1,229 @@
+/* Dispatch design tokens (P-DSP-30) - SINGLE OWNER of every visual token.
+ *
+ * Art direction (locked): dark-first dense devtool, monochrome surfaces +
+ * ONE amber accent derived from the product icon (dark rounded square +
+ * amber bar, `src-tauri/icons/icon.png`); light theme is paper + ink + the
+ * same amber accent. System font stack everywhere (no webfont dependency).
+ *
+ * Imported ONCE (`src/main.tsx`); every other stylesheet consumes these
+ * `var(--dsp-*)` tokens and holds zero color/spacing literals of its own.
+ * Themes: explicit `[data-theme="light"|"dark"]` scopes win; bare `:root`
+ * defaults to light with a `prefers-color-scheme` dark fallback for
+ * un-themed roots. BOTH themes define EVERY token (pinned by test).
+ */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces + text (light: paper + ink) */
+  --dsp-bg: #faf8f3;
+  --dsp-surface: #ffffff;
+  --dsp-surface-2: #f2eee3;
+  --dsp-fg: #1b1a17;
+  --dsp-muted: #5d594f;
+  --dsp-border: #ddd5c2;
+  --dsp-code-bg: #efe9da;
+
+  /* the ONE accent: amber */
+  --dsp-accent: #b45309;
+  --dsp-accent-soft: #fbeed3;
+  --dsp-accent-ink: #7c3d06;
+
+  /* semantics (light) */
+  --dsp-success: #0a7a2f;
+  --dsp-danger: #b42318;
+  --dsp-warn: #8a5a00;
+  --dsp-add: #0a7a2f;
+  --dsp-del: #b42318;
+
+  /* status dots (light) */
+  --dsp-dot-running: #16a34a;
+  --dsp-dot-idle: #a8a29e;
+  --dsp-dot-done: #2563eb;
+  --dsp-dot-error: #dc2626;
+  --dsp-dot-killed: #d97706;
+
+  /* focus */
+  --dsp-focus: #b45309;
+  --dsp-focus-ring: 2px solid var(--dsp-focus);
+
+  /* type scale (4 steps + title) */
+  --dsp-fs-xs: 12px;
+  --dsp-fs-sm: 13px;
+  --dsp-fs-base: 14px;
+  --dsp-fs-lg: 18px;
+  --dsp-fs-title: 24px;
+
+  /* spacing scale */
+  --dsp-sp-1: 4px;
+  --dsp-sp-2: 8px;
+  --dsp-sp-3: 12px;
+  --dsp-sp-4: 16px;
+  --dsp-sp-5: 24px;
+  --dsp-sp-6: 32px;
+
+  /* radius scale */
+  --dsp-r-sm: 4px;
+  --dsp-r-md: 6px;
+  --dsp-r-lg: 8px;
+  --dsp-r-xl: 12px;
+
+  /* shell layout (P-DSP-31: rail width, detail width, chat scroll height) */
+  --dsp-rail-w: 300px;
+  --dsp-detail-w: 400px;
+  --dsp-chat-max-h: 60vh;
+  /* density (P-DSP-33): Board column floor - lanes scroll past this width */
+  --dsp-board-col-min: 200px;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --dsp-bg: #faf8f3;
+  --dsp-surface: #ffffff;
+  --dsp-surface-2: #f2eee3;
+  --dsp-fg: #1b1a17;
+  --dsp-muted: #5d594f;
+  --dsp-border: #ddd5c2;
+  --dsp-code-bg: #efe9da;
+
+  --dsp-accent: #b45309;
+  --dsp-accent-soft: #fbeed3;
+  --dsp-accent-ink: #7c3d06;
+
+  --dsp-success: #0a7a2f;
+  --dsp-danger: #b42318;
+  --dsp-warn: #8a5a00;
+  --dsp-add: #0a7a2f;
+  --dsp-del: #b42318;
+
+  --dsp-dot-running: #16a34a;
+  --dsp-dot-idle: #a8a29e;
+  --dsp-dot-done: #2563eb;
+  --dsp-dot-error: #dc2626;
+  --dsp-dot-killed: #d97706;
+
+  --dsp-focus: #b45309;
+  --dsp-focus-ring: 2px solid var(--dsp-focus);
+
+  --dsp-fs-xs: 12px;
+  --dsp-fs-sm: 13px;
+  --dsp-fs-base: 14px;
+  --dsp-fs-lg: 18px;
+  --dsp-fs-title: 24px;
+
+  --dsp-sp-1: 4px;
+  --dsp-sp-2: 8px;
+  --dsp-sp-3: 12px;
+  --dsp-sp-4: 16px;
+  --dsp-sp-5: 24px;
+  --dsp-sp-6: 32px;
+
+  --dsp-r-sm: 4px;
+  --dsp-r-md: 6px;
+  --dsp-r-lg: 8px;
+  --dsp-r-xl: 12px;
+
+  /* shell layout (P-DSP-31: rail width, detail width, chat scroll height) */
+  --dsp-rail-w: 300px;
+  --dsp-detail-w: 400px;
+  --dsp-chat-max-h: 60vh;
+  /* density (P-DSP-33): Board column floor - lanes scroll past this width */
+  --dsp-board-col-min: 200px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* surfaces + text (dark-first: monochrome, warm-neutral) */
+  --dsp-bg: #141412;
+  --dsp-surface: #1d1d1b;
+  --dsp-surface-2: #262624;
+  --dsp-fg: #ece8df;
+  --dsp-muted: #b3ac9e;
+  --dsp-border: #35332e;
+  --dsp-code-bg: #23231f;
+
+  /* the ONE accent: amber, lifted for dark */
+  --dsp-accent: #fbbf24;
+  --dsp-accent-soft: #38300f;
+  --dsp-accent-ink: #fcd34d;
+
+  /* semantics (dark-mode-tuned: same meaning, dark-safe luminance) */
+  --dsp-success: #4ade80;
+  --dsp-danger: #f87171;
+  --dsp-warn: #fb923c;
+  --dsp-add: #4ade80;
+  --dsp-del: #f87171;
+
+  /* status dots (dark) */
+  --dsp-dot-running: #4ade80;
+  --dsp-dot-idle: #8a8578;
+  --dsp-dot-done: #60a5fa;
+  --dsp-dot-error: #f87171;
+  --dsp-dot-killed: #fbbf24;
+
+  /* focus */
+  --dsp-focus: #fbbf24;
+  --dsp-focus-ring: 2px solid var(--dsp-focus);
+
+  /* type scale (4 steps + title) */
+  --dsp-fs-xs: 12px;
+  --dsp-fs-sm: 13px;
+  --dsp-fs-base: 14px;
+  --dsp-fs-lg: 18px;
+  --dsp-fs-title: 24px;
+
+  /* spacing scale */
+  --dsp-sp-1: 4px;
+  --dsp-sp-2: 8px;
+  --dsp-sp-3: 12px;
+  --dsp-sp-4: 16px;
+  --dsp-sp-5: 24px;
+  --dsp-sp-6: 32px;
+
+  /* radius scale */
+  --dsp-r-sm: 4px;
+  --dsp-r-md: 6px;
+  --dsp-r-lg: 8px;
+  --dsp-r-xl: 12px;
+
+  /* shell layout (P-DSP-31: rail width, detail width, chat scroll height) */
+  --dsp-rail-w: 300px;
+  --dsp-detail-w: 400px;
+  --dsp-chat-max-h: 60vh;
+}
+
+/* System fallback for un-themed roots: dark surfaces when the OS is dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+
+    --dsp-bg: #141412;
+    --dsp-surface: #1d1d1b;
+    --dsp-surface-2: #262624;
+    --dsp-fg: #ece8df;
+    --dsp-muted: #b3ac9e;
+    --dsp-border: #35332e;
+    --dsp-code-bg: #23231f;
+
+    --dsp-accent: #fbbf24;
+    --dsp-accent-soft: #38300f;
+    --dsp-accent-ink: #fcd34d;
+
+    --dsp-success: #4ade80;
+    --dsp-danger: #f87171;
+    --dsp-warn: #fb923c;
+    --dsp-add: #4ade80;
+    --dsp-del: #f87171;
+
+    --dsp-dot-running: #4ade80;
+    --dsp-dot-idle: #8a8578;
+    --dsp-dot-done: #60a5fa;
+    --dsp-dot-error: #f87171;
+    --dsp-dot-killed: #fbbf24;
+
+    --dsp-focus: #fbbf24;
+    --dsp-focus-ring: 2px solid var(--dsp-focus);
+  }
+}
