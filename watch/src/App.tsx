@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Ref } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import SessionChat from "./components/SessionChat.js";
 import type { ChatMessage } from "./components/SessionChat.js";
 import ChatScroll from "./components/ChatScroll.js";
@@ -6,6 +8,8 @@ import { useLiveSession, sortChatChronological } from "./hooks/useLiveSession.js
 import { ensureClient } from "./lib/opencode.js";
 import type { OpenCodeClient } from "./lib/opencode.js";
 import { SessionManager } from "./lib/sessions.js";
+import { checkForWatchUpdate, installWatchUpdate, isNewer, latestWatchRelease } from "./lib/update.js";
+import type { WatchRelease } from "./lib/update.js";
 
 type Theme = "light" | "dark";
 
@@ -130,6 +134,67 @@ export function isSessionWorking(messages: ChatMessage[], sessionId: string | nu
   );
 }
 
+export interface WatchUpdateModalProps {
+  release: WatchRelease;
+  updating: boolean;
+  error: string | null;
+  updateRef: Ref<HTMLButtonElement>;
+  onUpdate: () => void;
+  onLater: () => void;
+}
+
+/**
+ * Self-update modal (WUPD): version, release notes as plain text (JSX
+ * escapes by construction, never HTML), Update + Later. Dismissal is
+ * caller-owned (session-only, no storage). Focus + Escape are wired by the
+ * caller: the Update button takes updateRef, Escape bubbles to onKeyDown.
+ */
+export function WatchUpdateModal(props: WatchUpdateModalProps): React.JSX.Element {
+  return (
+    <div
+      className="dsp-update-backdrop"
+      data-testid="update-backdrop"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") props.onLater();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="watch-update-title"
+        className="dsp-update-modal"
+        data-testid="update-modal"
+      >
+        <h2 id="watch-update-title">Watch update available: {props.release.tag}</h2>
+        <p className="dsp-update-notes" data-testid="update-notes">
+          {props.release.body ? props.release.body : "No release notes."}
+        </p>
+        {props.error ? <p data-testid="update-error">{props.error}</p> : null}
+        <div className="dsp-update-actions">
+          <button
+            ref={props.updateRef}
+            type="button"
+            className="dsp-btn-primary"
+            onClick={props.onUpdate}
+            disabled={props.updating}
+            data-testid="update-apply"
+          >
+            {props.updating ? "Updating..." : "Update"}
+          </button>
+          <button
+            type="button"
+            className="dsp-btn-ghost"
+            onClick={props.onLater}
+            data-testid="update-later"
+          >
+            Later
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App(): React.JSX.Element {
   const [theme, setTheme] = useState<Theme>("light");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -140,7 +205,14 @@ export default function App(): React.JSX.Element {
   const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<WatchRelease | null>(null);
+  const [updateOpen, setUpdateOpen] = useState(false);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [updateNote, setUpdateNote] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   const managerRef = useRef<SessionManager | null>(null);
+  const updateButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const loadSessions = useCallback(async (): Promise<void> => {
     const manager = managerRef.current;
@@ -167,6 +239,72 @@ export default function App(): React.JSX.Element {
       setLoading(false);
     }
   }, []);
+
+  const dismissUpdate = useCallback((): void => {
+    setUpdateOpen(false);
+    setUpdateDismissed(true);
+  }, []);
+
+  const applyUpdate = useCallback(async (): Promise<void> => {
+    if (!updateInfo) return;
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      await installWatchUpdate(updateInfo);
+      setUpdateOpen(false);
+    } catch (error) {
+      setUpdateError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setUpdating(false);
+    }
+  }, [updateInfo]);
+
+  // Manual check: same one-shot lookup, but the outcome lands in a note.
+  const checkUpdatesManually = useCallback(async (): Promise<void> => {
+    setUpdateNote(null);
+    setUpdateError(null);
+    try {
+      const current = await getVersion();
+      const latest = await latestWatchRelease();
+      if (!latest) {
+        setUpdateNote("Watch is up to date.");
+        return;
+      }
+      if (!isNewer(current, latest.tag)) {
+        setUpdateNote(`Watch is up to date (${current}).`);
+        return;
+      }
+      setUpdateInfo(latest);
+      if (!updateDismissed) setUpdateOpen(true);
+      setUpdateNote(`Update available: ${latest.tag}.`);
+    } catch {
+      setUpdateNote("Update check failed: offline or unreachable.");
+    }
+  }, [updateDismissed]);
+
+  // Self-update: exactly ONE automatic check on mount (abort on unmount).
+  // Offline or up-to-date stays silent; the topbar button reports instead.
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    (async () => {
+      const pending = await checkForWatchUpdate(controller.signal);
+      if (!active || controller.signal.aborted) return;
+      if (pending) {
+        setUpdateInfo(pending);
+        setUpdateOpen(true);
+      }
+    })();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
+
+  // Modal a11y: focus the Update button whenever the modal opens.
+  useEffect(() => {
+    if (updateOpen) updateButtonRef.current?.focus();
+  }, [updateOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -270,7 +408,16 @@ export default function App(): React.JSX.Element {
             aria-label="reload sessions"
           >
             {loading ? "Loading..." : "Reload"}
+          </button>{" "}
+          <button
+            type="button"
+            className="dsp-btn-ghost"
+            onClick={() => void checkUpdatesManually()}
+            aria-label="check for updates"
+          >
+            Check for updates
           </button>
+          {updateNote ? <span data-testid="update-note">{updateNote}</span> : null}
         </div>
       </header>
       <div className="dsp-body">
@@ -345,6 +492,16 @@ export default function App(): React.JSX.Element {
           )}
         </section>
       </div>
+      {updateOpen && updateInfo ? (
+        <WatchUpdateModal
+          release={updateInfo}
+          updating={updating}
+          error={updateError}
+          updateRef={updateButtonRef}
+          onUpdate={() => void applyUpdate()}
+          onLater={dismissUpdate}
+        />
+      ) : null}
     </main>
   );
 }
