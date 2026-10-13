@@ -288,7 +288,6 @@
 }
 
 .dsp-session-item {
-  position: relative;
   border: 1px solid var(--dsp-border);
   border-radius: var(--dsp-r-md);
   background: var(--dsp-surface);
@@ -388,26 +387,31 @@
   animation: dsp-pulse 2s ease-in-out infinite;
 }
 
-.dsp-session-item:has(.dsp-session-select[data-selected="true"])::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: var(--dsp-sp-2);
-  width: var(--dsp-sp-2);
-  height: var(--dsp-sp-2);
-  border-radius: 50%;
-  background: var(--dsp-dot-running);
-  animation: dsp-pulse 2s ease-in-out infinite;
+/* Working indicator (WWIP): the letter badge swaps to a rotating ring
+ * ONLY while that session folds a live running tool call
+ * (data-working="true"). Selection alone never animates; the
+ * selected-card accent border above stays. Keyframes only, token colors
+ * only, no emoji, no images. Covered by the prefers-reduced-motion guard
+ * below. */
+.dsp-session-badge[data-working="true"] {
+  background: var(--dsp-surface-2);
 }
 
-/* Watched-card working indicator: the letter badge takes the accent and
- * joins the dsp-pulse rhythm (CSS keyframes only - no timers, no polling).
- * Covered by the prefers-reduced-motion guard below. */
-.dsp-session-item:has(.dsp-session-select[data-selected="true"]) .dsp-session-badge {
-  background: var(--dsp-accent);
-  color: var(--dsp-bg);
-  animation: dsp-pulse 2s ease-in-out infinite;
+.dsp-spinner {
+  display: inline-block;
+  width: var(--dsp-sp-3);
+  height: var(--dsp-sp-3);
+  border-radius: 50%;
+  border: 2px solid var(--dsp-border);
+  border-top-color: var(--dsp-accent);
+}
+
+.dsp-session-badge[data-working="true"] .dsp-spinner {
+  animation: dsp-spin 1s linear infinite;
+}
+
+@keyframes dsp-spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes dsp-pulse {

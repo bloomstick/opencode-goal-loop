@@ -100,7 +100,13 @@ describe("WUI2 watch list polish", () => {
     expect(css).toContain("list-style: none");
     expect(css).toContain("text-overflow: ellipsis");
     expect(css).toContain(".dsp-session-item:has(.dsp-session-select[data-selected=\"true\"])");
-    expect(css).toContain(".dsp-session-item:has(.dsp-session-select[data-selected=\"true\"])::after");
+    // WWIP: the green selected dot is gone; the accent border stays and
+    // the working spinner swaps the badge only on live running tools.
+    expect(css).not.toContain(
+      ".dsp-session-item:has(.dsp-session-select[data-selected=\"true\"])::after",
+    );
+    expect(css).toContain(".dsp-spinner");
+    expect(css).toContain("@keyframes dsp-spin");
   });
 
   it("styles the service-status badge from data-live", async () => {
