@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- `goal-loop`: LAND phase (SKILL.md new sec. 7): solo flow merges locally,
+  pushes, proves - no PRs (no protection, no PR CI to gate on).
+  Orchestrator: fetch origin, merge each worker branch into local `main`
+  with `--no-ff` one at a time (green suite after each; resolve +
+  re-verify on conflict), push main, prove (`ls-remote origin main` SHA
+  equals local `main` + every worker commit contained in `origin/main`),
+  remove TEMP worktrees. Report DONE gains `Landed:` line (origin/main
+  SHA, local==remote proof, tag/release state). Workers still branch-only;
+  tags pushed only when the goal says publish.
+
 - `watch/` 0.1.3: chat fixes (chronological order, true-bottom follow,
   centered dot, badges + WIP pulse).
 

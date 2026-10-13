@@ -30,7 +30,8 @@ work runs as foreground `opencode run` processes, never as subagents.
   `.opencode/goals/state.json.lock*` system). Goal state is one plain
   `reqs-manifest.md` per goal, written atomically by the orchestrator.
 - Orchestrator never does worker work when delegating. Workers never touch
-  seams outside their scope. Branch only, never push `main`.
+  seams outside their scope. Workers: branch only, never push `main` (only
+  the orchestrator pushes `main`, in §7 LAND).
 
 ## 1. When to use
 
@@ -49,16 +50,26 @@ work runs as foreground `opencode run` processes, never as subagents.
    chat memory — is the acceptance record.
 3. **DAG.** Map dependencies. No-dependency requirements may run parallel;
    dependent ones run in order. Same-file edits always sequential.
-4. **Dispatch.** One worktree + branch per worker (§4). Write a six-part
-   worker prompt file (§3), run it foreground, collect the report block.
-5. **Integrate sequentially.** Merge/cherry-pick one worker at a time onto
-   the integration branch, resolving conflicts, re-running the named green
-   suite after each. Fix cross-worker seams yourself.
+4. **Dispatch.** Fetch `origin` first; base every worker branch on the
+   `origin/main` tip so stale bases cannot strand work. One worktree +
+   branch per worker (§4). Branch-per-worker stays mandatory even though
+   the solo flow uses no PRs (isolation + remote backup before merge).
+   Write a six-part worker prompt file (§3), run it foreground, collect
+   the report block.
+5. **Integrate sequentially.** Merge one worker at a time onto
+   local `main` with `git merge --no-ff` (§7 LAND), resolving conflicts,
+   re-running the named green suite after each. Fix cross-worker seams
+   yourself.
 6. **Verify.** Full manifest acceptance: every requirement checked against
    its verification path (commands run + outputs, files checked). Frontend
    work adds an end-to-end pass with screenshots where available.
-7. **Report.** Implementation report + what remains + next concrete step.
-   Wait for the next task. Nothing keeps running after DONE.
+7. **Land (§7).** `push main`, then prove: `git ls-remote origin main` SHA
+   equals local `main` AND every worker commit is contained in
+   `origin/main` (`git branch -r --contains <sha>`; fail loudly
+   otherwise — that is never DONE). Remove TEMP worktrees.
+8. **Report.** Implementation report + what remains + next concrete step,
+   with the §6 `Landed:` proof line. No `Landed:` proof, no DONE. Wait
+   for the next task. Nothing keeps running after DONE.
 
 ## 3. Worker prompt file (six parts, in order)
 
@@ -130,3 +141,37 @@ edit the manifest directly; they report, the orchestrator records.
 Per worker + integration: task-code, files, SLOC structural-vs-cheap
 split, commands + outputs, `Caveats: none` or explicit list (unverified
 areas, risks, follow-ups). Stdout MUST end with the §3 report block last.
+
+DONE block gains a `Landed:` line — `origin/main` SHA, local==remote
+proof (`git rev-parse main` vs `git ls-remote origin main`), tag/release
+state (pushed vs. pending owner). No `Landed:` proof, no DONE.
+
+```
+Landed: origin/main <sha> (local==remote: <sha>) | tags: <none pushed | pending owner>
+```
+
+## 7. LAND phase (solo flow: merge locally, push, prove — no PRs)
+
+No PRs on the solo flow: there is no branch protection and no PR CI to
+gate on, so PRs are pure roundtrips where finished work rots. The loop
+closes itself in the same invocation. Branch-per-worker is still
+mandatory (isolation + remote backup before merge).
+
+1. Workers pushed their branches (worker protocol, §3 step 7). Fetch
+   first so the merge base is the live tip:
+   `git fetch origin`.
+2. Merge each worker branch into local `main` with `git merge --no-ff`,
+   ONE at a time. Re-run the named green suite after each merge; on
+   conflict, resolve, re-verify the suite, then continue with the next
+   branch. Never batch merges without a green run between them.
+3. `git push origin main` (orchestrator only — workers never push
+   `main`). Never push tags unless the goal explicitly says publish;
+   releases stay pending owner by default.
+4. Prove landing, loudly or not at all:
+   - `git ls-remote origin main` SHA equals local `git rev-parse main`.
+   - Every worker commit is contained in `origin/main`:
+     `git branch -r --contains <worker-sha>` must list `origin/main`.
+   - Fail loudly otherwise — an unproven push is never DONE.
+5. Remove TEMP worktrees (`git worktree remove <path>`). Keep branches
+   as remote backup until the report is accepted.
+6. DONE, with the §6 `Landed:` line in the report.
