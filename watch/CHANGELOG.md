@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1]
+
+* Chat list polish: session cards (no bullets, ellipsis titles with hover,
+  selected accent + watching marker), live badge dot, pulsing running tool
+  dot; dead CSS for removed components pruned. No behavior changes.
+
 ## [Unreleased]
 
 * Watch-only shell cut: sidecar keeps only `opencode_service_endpoint` (git/gh/store/screenshot commands removed; live chat runs over @opencode/client SSE), `scripts/` deleted with the `probe`/`live-proof`/`vision-review`/`vision-diff` npm scripts and the `tsx` devDep, `docs/` replaced by `docs/WATCH.md`, README slimmed to watcher-only, `index.html` title to Watch, `TO-DO.md` and `opencode.json` deleted. Attended-only: closing the window stops everything, no background state.
