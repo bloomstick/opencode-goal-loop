@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2]
+
+* Rename Dispatch to Watch: window title + productName to Watch,
+  identifier to `ai.watch.app`, npm + Cargo package names to `watch`
+  (bundle output becomes `Watch_*.exe`/MSI; fresh app identity, so 0.1.x
+  installs under the old id will not auto-upgrade). Release workflow
+  actions past Node 20 (`actions/checkout` + `actions/setup-node` v4 to
+  v5, `softprops/action-gh-release` v2 to v3).
+
 ## [0.1.1]
 
 * Chat list polish: session cards (no bullets, ellipsis titles with hover,
