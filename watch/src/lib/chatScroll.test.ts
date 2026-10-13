@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHAT_NEAR_BOTTOM_PX,
+  bottomScrollTop,
   distanceFromBottom,
   isNearBottom,
   prefersReducedMotion,
@@ -37,5 +38,31 @@ describe("chat auto-scroll-with-respect (P-DSP-31)", () => {
 
   it("reduced-motion guard is safe off-DOM", () => {
     expect(typeof prefersReducedMotion()).toBe("boolean");
+  });
+});
+
+describe("true-bottom snap for long messages (REQ-02)", () => {
+  it("targets scrollHeight minus viewport, never raw scrollHeight", () => {
+    expect(bottomScrollTop({ scrollHeight: 1000, scrollTop: 800, clientHeight: 200 })).toBe(800);
+    expect(bottomScrollTop({ scrollHeight: 1000, scrollTop: 0, clientHeight: 200 })).toBe(800);
+    expect(bottomScrollTop({ scrollHeight: 150, scrollTop: 0, clientHeight: 200 })).toBe(0);
+  });
+
+  it("reaches the true bottom for a long message", () => {
+    // Long streamed message: content towers over the viewport.
+    const long = { scrollHeight: 5000, scrollTop: 0, clientHeight: 200 };
+    const target = bottomScrollTop(long);
+    expect(target).toBe(4800);
+    expect(distanceFromBottom({ ...long, scrollTop: target })).toBe(0);
+    expect(isNearBottom({ ...long, scrollTop: target })).toBe(true);
+  });
+
+  it("reproduces the short-scroll: stale offset after in-place growth", () => {
+    // Before growth the pane sat at the bottom; the delta grew the message
+    // in place (same count) without re-sticking - the offset is now short.
+    const stale = { scrollHeight: 5000, scrollTop: 800, clientHeight: 200 };
+    expect(distanceFromBottom(stale)).toBe(4000);
+    expect(isNearBottom(stale)).toBe(false);
+    expect(bottomScrollTop(stale)).toBe(4800);
   });
 });

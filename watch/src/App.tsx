@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import SessionChat from "./components/SessionChat.js";
 import type { ChatMessage } from "./components/SessionChat.js";
 import ChatScroll from "./components/ChatScroll.js";
-import { useLiveSession } from "./hooks/useLiveSession.js";
+import { useLiveSession, sortChatChronological } from "./hooks/useLiveSession.js";
 import { ensureClient } from "./lib/opencode.js";
 import type { OpenCodeClient } from "./lib/opencode.js";
 import { SessionManager } from "./lib/sessions.js";
@@ -99,7 +99,17 @@ function messagesFromList(sessionID: string, listResult: unknown): ChatMessage[]
       createdAt: messageTimeOf(record),
     });
   });
-  return out;
+  // Chronological (oldest top / newest bottom) regardless of payload order.
+  return sortChatChronological(out);
+}
+
+/**
+ * Letter-avatar badge text: first alphanumeric of the title, uppercased.
+ * Pure display helper (no timers, no storage); "?" when nothing qualifies.
+ */
+export function sessionBadgeLetter(title: string): string {
+  const hit = title.match(/[A-Za-z0-9]/);
+  return hit && hit[0] ? hit[0].toUpperCase() : "?";
 }
 
 export default function App(): React.JSX.Element {
@@ -206,7 +216,12 @@ export default function App(): React.JSX.Element {
     setMessages,
   });
 
-  const selectedMessages = selectedId ? messages.filter((m) => m.sessionId === selectedId) : [];
+  // Chronological display: oldest top / newest bottom even when live
+  // deltas arrive out of order (sort is stable, so ties keep arrival order).
+  const selectedMessages = selectedId
+    ? sortChatChronological(messages.filter((m) => m.sessionId === selectedId))
+    : [];
+  const chatContentKey = selectedMessages.reduce((n, m) => n + m.text.length, 0);
 
   return (
     <main className="dsp-app dsp-shell" data-theme={theme} data-live={String(live)}>
@@ -264,7 +279,10 @@ export default function App(): React.JSX.Element {
                       setSelectedId((current) => (current === session.id ? null : session.id))
                     }
                   >
-                    {session.title}
+                    <span className="dsp-session-badge" aria-hidden="true">
+                      {sessionBadgeLetter(session.title)}
+                    </span>
+                    <span className="dsp-session-title">{session.title}</span>
                   </button>
                 </li>
               ))}
@@ -285,7 +303,11 @@ export default function App(): React.JSX.Element {
         <section aria-label="watched chat" data-testid="watch-pane">
           <h2>Chat</h2>
           {selectedId ? (
-            <ChatScroll followKey={selectedId} messageCount={selectedMessages.length}>
+            <ChatScroll
+              followKey={selectedId}
+              messageCount={selectedMessages.length}
+              contentKey={chatContentKey}
+            >
               <SessionChat messages={selectedMessages} theme={theme} />
             </ChatScroll>
           ) : (

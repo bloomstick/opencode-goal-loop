@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   CHAT_NEAR_BOTTOM_PX,
+  bottomScrollTop,
   isNearBottom,
   prefersReducedMotion,
 } from "../lib/chatScroll.js";
@@ -16,6 +17,13 @@ export interface ChatScrollProps {
   followKey: string;
   /** Message count: growth while following sticks; while paused it flags. */
   messageCount: number;
+  /**
+   * Rendered content size (chars). Live deltas grow message text in place
+   * without changing `messageCount`; this key re-arms follow so a long
+   * streaming message still reaches the true bottom. Defaults to
+   * `messageCount` when omitted.
+   */
+  contentKey?: number;
   /** The chat renderer (existing SessionChat, unchanged). */
   children: ReactNode;
 }
@@ -27,31 +35,42 @@ export interface ChatScrollProps {
  * new content arrived while paused (click snaps back and resumes follow).
  * Smooth scroll, instant under `prefers-reduced-motion`. Scroll events only
  * - no timers, no polling, no fetching. Lives outside SessionChat so the
- * P-DSP-16 effect-free pin on the renderer holds.
+ * P-DSP-16 effect-free pin on the renderer holds. Layout-timed so long
+ * messages measure the true bottom after DOM commit, never short of it.
  */
 export default function ChatScroll({
   followKey,
   messageCount,
+  contentKey,
   children,
 }: ChatScrollProps): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [follow, setFollow] = useState(true);
   const [newWhilePaused, setNewWhilePaused] = useState(false);
   const countRef = useRef(messageCount);
+  const contentRef = useRef(contentKey ?? messageCount);
 
   const snapToBottom = (smooth: boolean): void => {
     const el = scrollRef.current;
     if (!el) return;
+    const bottom = bottomScrollTop({
+      scrollHeight: el.scrollHeight,
+      scrollTop: el.scrollTop,
+      clientHeight: el.clientHeight,
+    });
     if (smooth && !prefersReducedMotion() && typeof el.scrollTo === "function") {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      el.scrollTo({ top: bottom, behavior: "smooth" });
     } else {
-      el.scrollTop = el.scrollHeight;
+      el.scrollTop = bottom;
     }
   };
 
   // New streamed content: stick when following, else flag for the jump button.
-  useEffect(() => {
-    if (messageCount > countRef.current) {
+  // Watches content size too: deltas append text in place (same count), and
+  // a long message must still pull the pane to the true bottom.
+  useLayoutEffect(() => {
+    const size = contentKey ?? messageCount;
+    if (messageCount > countRef.current || size > contentRef.current) {
       if (follow) {
         snapToBottom(true);
       } else {
@@ -59,15 +78,18 @@ export default function ChatScroll({
       }
     }
     countRef.current = messageCount;
-  }, [messageCount, follow]);
+    contentRef.current = size;
+  }, [messageCount, contentKey, follow]);
 
   // Session switch (same selectedId model from the parent): resume follow.
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFollow(true);
     setNewWhilePaused(false);
     countRef.current = messageCount;
+    contentRef.current = contentKey ?? messageCount;
     snapToBottom(false);
-    // `messageCount` read here resets the arrival baseline on switch only.
+    // `messageCount`/`contentKey` read here reset the arrival baseline on
+    // switch only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [followKey]);
 
