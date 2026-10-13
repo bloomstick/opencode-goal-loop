@@ -68,9 +68,63 @@ fn opencode_service_endpoint() -> Result<ServiceEndpoint, String> {
     Ok(ServiceEndpoint { url, password })
 }
 
+/// Stage a downloaded update installer under the OS temp dir and return the
+/// staged path. Scoped: the file name must be a bare `*.exe`/`*.msi` name
+/// (no directories, no drive prefixes); the parent is always the temp dir.
+/// One write, no watchers, no persistence beyond the staged installer.
+#[tauri::command]
+fn watch_stage_update(filename: String, bytes: Vec<u8>) -> Result<String, String> {
+    let lower = filename.to_ascii_lowercase();
+    if !lower.ends_with(".exe") && !lower.ends_with(".msi") {
+        return Err("refusing to stage a non-installer file".to_string());
+    }
+    if filename.contains('/') || filename.contains('\\') || filename.contains(':') {
+        return Err("refusing to stage a file name with path separators".to_string());
+    }
+    let path = std::env::temp_dir().join(&filename);
+    std::fs::write(&path, &bytes).map_err(|e| format!("staging the update failed: {e}"))?;
+    path.to_str()
+        .map(str::to_string)
+        .ok_or_else(|| "staged update path is not valid unicode".to_string())
+}
+
+/// Launch a staged installer from the OS temp dir, then quit Watch. The path
+/// must name a `*.exe`/`*.msi` file directly inside the temp dir (MSI goes
+/// through msiexec). The process exits after spawning the installer, so the
+/// installer can replace the running app.
+#[tauri::command]
+fn watch_launch_installer(path: String) -> Result<(), String> {
+    let lower = path.to_ascii_lowercase();
+    let is_exe = lower.ends_with(".exe");
+    let is_msi = lower.ends_with(".msi");
+    if !is_exe && !is_msi {
+        return Err("refusing to launch a non-installer file".to_string());
+    }
+    let staged = std::path::Path::new(&path);
+    if staged.parent() != Some(std::env::temp_dir().as_path()) {
+        return Err("installer path is outside the OS temp dir".to_string());
+    }
+    if is_msi {
+        std::process::Command::new("msiexec")
+            .arg("/i")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("launching the installer failed: {e}"))?;
+    } else {
+        std::process::Command::new(&path)
+            .spawn()
+            .map_err(|e| format!("launching the installer failed: {e}"))?;
+    }
+    std::process::exit(0);
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![opencode_service_endpoint])
+        .invoke_handler(tauri::generate_handler![
+            opencode_service_endpoint,
+            watch_stage_update,
+            watch_launch_installer
+        ])
         .run(tauri::generate_context!())
         .expect("error while running watch application");
 }

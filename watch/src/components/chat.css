@@ -590,3 +590,46 @@
     transition: none !important;
   }
 }
+
+/* ---- self-update modal (WUPD): tokens only, no literals --------------- */
+
+.dsp-update-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--dsp-sp-4);
+}
+
+.dsp-update-modal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--dsp-surface);
+  color: var(--dsp-fg);
+  border: 1px solid var(--dsp-border);
+  border-radius: var(--dsp-r-lg);
+  padding: var(--dsp-sp-4);
+}
+
+.dsp-update-modal h2 {
+  font-size: var(--dsp-fs-lg);
+  margin: 0 0 var(--dsp-sp-2);
+}
+
+.dsp-update-notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: var(--dsp-chat-max-h);
+  overflow-y: auto;
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-sm);
+  margin: 0 0 var(--dsp-sp-3);
+}
+
+.dsp-update-actions {
+  display: flex;
+  gap: var(--dsp-sp-2);
+  align-items: center;
+}
