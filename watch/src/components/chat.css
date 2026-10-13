@@ -311,12 +311,34 @@
   color: inherit;
   cursor: pointer;
   text-align: left;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--dsp-sp-2);
   width: 100%;
   min-width: 0;
   padding: 0 var(--dsp-sp-4) 0 0 !important;
   font-size: var(--dsp-fs-sm);
   font-weight: 600;
+}
+
+/* Letter-avatar badge: first alphanumeric of the title, uppercased. */
+.dsp-session-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dsp-sp-5);
+  height: var(--dsp-sp-5);
+  border-radius: 50%;
+  background: var(--dsp-surface-2);
+  color: var(--dsp-muted);
+  font-size: var(--dsp-fs-xs);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dsp-session-title {
+  min-width: 0;
+  flex: 1 1 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -369,12 +391,22 @@
 .dsp-session-item:has(.dsp-session-select[data-selected="true"])::after {
   content: "";
   position: absolute;
-  top: var(--dsp-sp-2);
+  top: 50%;
+  transform: translateY(-50%);
   right: var(--dsp-sp-2);
   width: var(--dsp-sp-2);
   height: var(--dsp-sp-2);
   border-radius: 50%;
   background: var(--dsp-dot-running);
+  animation: dsp-pulse 2s ease-in-out infinite;
+}
+
+/* Watched-card working indicator: the letter badge takes the accent and
+ * joins the dsp-pulse rhythm (CSS keyframes only - no timers, no polling).
+ * Covered by the prefers-reduced-motion guard below. */
+.dsp-session-item:has(.dsp-session-select[data-selected="true"]) .dsp-session-badge {
+  background: var(--dsp-accent);
+  color: var(--dsp-bg);
   animation: dsp-pulse 2s ease-in-out infinite;
 }
 
@@ -485,6 +517,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .dsp-chat-scroll {
