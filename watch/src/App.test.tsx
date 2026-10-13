@@ -64,4 +64,22 @@ describe("App watch-only shell (WUI)", () => {
     expect(src).toContain('aria-label="toggle theme"');
     expect(src).toContain('aria-label="reload sessions"');
   });
+
+  it("styles the session list as cards without changing wiring", async () => {
+    const src = await appSrc();
+    expect(src).toContain('className="dsp-sessions"');
+    expect(src).toContain('className="dsp-session-item"');
+    expect(src).toContain('className="dsp-session-select"');
+    expect(src).toContain('data-testid="session-list"');
+    expect(src).toContain("aria-pressed");
+    expect(src).toContain("data-selected");
+    expect(src).toContain("title={session.title}");
+  });
+
+  it("styles service-status as a badge driven by data-live", async () => {
+    const src = await appSrc();
+    expect(src).toContain('data-testid="service-status"');
+    expect(src).toContain('className="dsp-status"');
+    expect(src).toContain("data-live={String(live)}");
+  });
 });

@@ -218,7 +218,7 @@ export default function App(): React.JSX.Element {
           </div>
         </div>
         <div className="dsp-topbar-controls">
-          <span data-testid="service-status" data-live={String(live)}>
+          <span className="dsp-status" data-testid="service-status" data-live={String(live)}>
             {live ? "live" : "offline"}
           </span>
           <button
@@ -246,11 +246,17 @@ export default function App(): React.JSX.Element {
           {sessions.length === 0 ? (
             <p data-testid="sessions-empty">No live sessions.</p>
           ) : (
-            <ul data-testid="session-list">
+            <ul className="dsp-sessions" data-testid="session-list">
               {sessions.map((session) => (
-                <li key={session.id} data-testid={`session-${session.id}`}>
+                <li
+                  key={session.id}
+                  className="dsp-session-item"
+                  data-testid={`session-${session.id}`}
+                >
                   <button
                     type="button"
+                    className="dsp-session-select"
+                    title={session.title}
                     aria-label={`watch ${session.id}`}
                     aria-pressed={selectedId === session.id}
                     data-selected={String(selectedId === session.id)}
