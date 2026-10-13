@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.3]
+
+* Chat fixes: chronological order, true-bottom follow, centered watching
+  dot, letter-avatar badges + WIP pulse. No behavior changes otherwise.
+
 ## [0.1.2]
 
 * Rename Dispatch to Watch: window title + productName to Watch,
