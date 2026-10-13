@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- `watch/` 0.1.1: chat list polish (session cards, live badge, WIP
+  indicators, dead CSS pruned) + refreshed `docs/watch.png` showcase shot.
+
 - `watch/`: promote release workflow to repo root as
   `.github/workflows/watch-release.yml` (scoped to `watch/`, triggers on
   `watch-v*` tags + `workflow_dispatch`); delete the watch-subdir `.github`
