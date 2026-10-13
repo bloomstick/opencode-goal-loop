@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import SessionChat from "./SessionChat.js";
@@ -55,11 +56,92 @@ describe("SessionChat watch renderer", () => {
   });
 
   it("source uses stable keys, never index keys for live rows", async () => {
-    const { readFile } = await import("node:fs/promises");
     const chatSrc = await readFile(new URL("./SessionChat.tsx", import.meta.url), "utf8");
     expect(chatSrc).toMatch(/key=\{message\.id\}/);
     expect(chatSrc).toMatch(/key=\{block\.id\}/);
     expect(chatSrc).not.toMatch(/key=\{i\}/);
     expect(chatSrc).not.toMatch(/key=\{index\}/);
+  });
+
+  it("renders running tool rows with data-status for the pulse", () => {
+    const running: ChatMessage[] = [
+      {
+        id: "msg-r",
+        sessionId: "ses-1",
+        role: "assistant",
+        text: "Working.",
+        toolCalls: [{ id: "tool-r", name: "read file", input: "{}", status: "running" }],
+        createdAt: "2026-10-07T00:03:00.000Z",
+      },
+    ];
+    const html = renderToStaticMarkup(<SessionChat messages={running} />);
+    expect(html).toContain('data-status="running"');
+    expect(html).toContain("read file");
+  });
+});
+
+describe("WUI2 watch list polish", () => {
+  async function chatCss(): Promise<string> {
+    return readFile(new URL("./chat.css", import.meta.url), "utf8");
+  }
+
+  it("pulses the running tool dot via dsp-pulse", async () => {
+    const css = await chatCss();
+    expect(css).toContain(".dsp-dot[data-status=\"running\"]");
+    expect(css).toContain("animation: dsp-pulse");
+    expect(css).toContain("@keyframes dsp-pulse");
+  });
+
+  it("marks the watched session card via CSS only", async () => {
+    const css = await chatCss();
+    expect(css).toContain(".dsp-sessions");
+    expect(css).toContain(".dsp-session-item");
+    expect(css).toContain(".dsp-session-select");
+    expect(css).toContain("list-style: none");
+    expect(css).toContain("text-overflow: ellipsis");
+    expect(css).toContain(".dsp-session-item:has(.dsp-session-select[data-selected=\"true\"])");
+    expect(css).toContain(".dsp-session-item:has(.dsp-session-select[data-selected=\"true\"])::after");
+  });
+
+  it("styles the service-status badge from data-live", async () => {
+    const css = await chatCss();
+    expect(css).toContain(".dsp-status");
+    expect(css).toContain(".dsp-status[data-live=\"true\"]");
+    expect(css).toContain(".dsp-status::before");
+  });
+
+  it("keeps reduced-motion covering all animation", async () => {
+    const css = await chatCss();
+    expect(css).toContain("prefers-reduced-motion");
+    expect(css).toContain("animation: none");
+  });
+
+  it("prunes deleted-component rules", async () => {
+    const css = await chatCss();
+    for (const dead of [
+      ".dsp-board",
+      ".dsp-runs",
+      ".dsp-run",
+      ".dsp-panel",
+      ".dsp-unstarted",
+      ".dsp-workspace",
+      ".dsp-heartbeat",
+      ".dsp-legend",
+      ".dsp-kill",
+      ".dsp-repo-",
+      ".dsp-repos-",
+      ".dsp-rail",
+      ".dsp-accordion",
+      ".dsp-main-col",
+      ".dsp-main-grid",
+      ".dsp-chat-pane",
+      ".dsp-tabs",
+      ".dsp-intro",
+      ".dsp-about",
+      ".dsp-meta-line",
+      ".dsp-topbar-status",
+    ]) {
+      expect(css, `pruned ${dead}`).not.toContain(dead);
+    }
   });
 });
