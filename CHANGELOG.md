@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- `watch/` 0.1.4: working spinner swaps badge (green dot removed);
+  self-update one-shot check + modal + install (one-shot, no intervals).
+
 - `goal-loop`: LAND phase (SKILL.md new sec. 7): solo flow merges locally,
   pushes, proves - no PRs (no protection, no PR CI to gate on).
   Orchestrator: fetch origin, merge each worker branch into local `main`

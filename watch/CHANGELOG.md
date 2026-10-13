@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4]
+
+* Working spinner swaps badge, green dot removed: running sessions show a
+  spinner in place of the static badge while work is in flight.
+* Self-update one-shot check + modal + install: single check on launch with
+  an update modal and install path; one-shot, no intervals.
+
 ## [0.1.3]
 
 * Chat fixes: chronological order, true-bottom follow, centered watching
