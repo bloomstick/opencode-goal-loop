@@ -112,6 +112,24 @@ export function sessionBadgeLetter(title: string): string {
   return hit && hit[0] ? hit[0].toUpperCase() : "?";
 }
 
+/**
+ * Working signal (render-time only, no timers, no polling): a session
+ * counts as working ONLY while its folded live messages hold at least one
+ * tool call with status "running" (useLiveSession folds tool.called to
+ * running and tool.success/tool.failed to done/error). session.list rows
+ * carry no live status field (id/title/time only), so selection alone
+ * never counts as working; unwatched sessions hold no messages and read
+ * as idle. Pure.
+ */
+export function isSessionWorking(messages: ChatMessage[], sessionId: string | null): boolean {
+  if (!sessionId) return false;
+  return messages.some(
+    (message) =>
+      message.sessionId === sessionId &&
+      (message.toolCalls ?? []).some((call) => call.status === "running"),
+  );
+}
+
 export default function App(): React.JSX.Element {
   const [theme, setTheme] = useState<Theme>("light");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -262,30 +280,42 @@ export default function App(): React.JSX.Element {
             <p data-testid="sessions-empty">No live sessions.</p>
           ) : (
             <ul className="dsp-sessions" data-testid="session-list">
-              {sessions.map((session) => (
-                <li
-                  key={session.id}
-                  className="dsp-session-item"
-                  data-testid={`session-${session.id}`}
-                >
-                  <button
-                    type="button"
-                    className="dsp-session-select"
-                    title={session.title}
-                    aria-label={`watch ${session.id}`}
-                    aria-pressed={selectedId === session.id}
-                    data-selected={String(selectedId === session.id)}
-                    onClick={() =>
-                      setSelectedId((current) => (current === session.id ? null : session.id))
-                    }
+              {sessions.map((session) => {
+                const working = isSessionWorking(messages, session.id);
+                return (
+                  <li
+                    key={session.id}
+                    className="dsp-session-item"
+                    data-testid={`session-${session.id}`}
                   >
-                    <span className="dsp-session-badge" aria-hidden="true">
-                      {sessionBadgeLetter(session.title)}
-                    </span>
-                    <span className="dsp-session-title">{session.title}</span>
-                  </button>
-                </li>
-              ))}
+                    <button
+                      type="button"
+                      className="dsp-session-select"
+                      title={session.title}
+                      aria-label={working ? `watch ${session.id} working` : `watch ${session.id}`}
+                      aria-pressed={selectedId === session.id}
+                      data-selected={String(selectedId === session.id)}
+                      data-working={String(working)}
+                      onClick={() =>
+                        setSelectedId((current) => (current === session.id ? null : session.id))
+                      }
+                    >
+                      <span
+                        className="dsp-session-badge"
+                        data-working={String(working)}
+                        aria-hidden="true"
+                      >
+                        {working ? (
+                          <span className="dsp-spinner" aria-hidden="true" />
+                        ) : (
+                          sessionBadgeLetter(session.title)
+                        )}
+                      </span>
+                      <span className="dsp-session-title">{session.title}</span>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
           {selectedId ? (

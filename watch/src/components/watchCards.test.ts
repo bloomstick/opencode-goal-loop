@@ -1,51 +1,123 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-import { sessionBadgeLetter } from "../App.js";
+import { isSessionWorking, sessionBadgeLetter } from "../App.js";
+import type { ChatMessage } from "./SessionChat.js";
 
-// REQ-03 (centered watching dot) + REQ-04 (letter badges + WIP pulse).
-describe("watch card indicator and badges (REQ-03/REQ-04)", () => {
+function chatMessage(overrides: Partial<ChatMessage> & { id: string }): ChatMessage {
+  return {
+    sessionId: "ses-1",
+    role: "assistant",
+    text: "",
+    createdAt: "2026-10-07T00:01:00.000Z",
+    ...overrides,
+  };
+}
+
+// WWIP: a session counts as working ONLY on positive live evidence (a
+// folded tool call with status "running") - never on mere selection.
+describe("watch card working signal (WWIP)", () => {
+  it("counts as working on a folded running tool call", () => {
+    const messages = [
+      chatMessage({
+        id: "m-1",
+        toolCalls: [{ id: "t-1", name: "read", input: "", status: "running" }],
+      }),
+    ];
+    expect(isSessionWorking(messages, "ses-1")).toBe(true);
+  });
+
+  it("stays working with mixed settled calls until all settle", () => {
+    const messages = [
+      chatMessage({
+        id: "m-1",
+        toolCalls: [
+          { id: "t-1", name: "read", input: "", status: "done" },
+          { id: "t-2", name: "edit", input: "", status: "running" },
+        ],
+      }),
+    ];
+    expect(isSessionWorking(messages, "ses-1")).toBe(true);
+  });
+
+  it("reads done/error/no-tool messages as idle", () => {
+    const settled = [
+      chatMessage({
+        id: "m-1",
+        toolCalls: [{ id: "t-1", name: "read", input: "", status: "done" }],
+      }),
+      chatMessage({
+        id: "m-2",
+        toolCalls: [{ id: "t-2", name: "edit", input: "", status: "error" }],
+      }),
+      chatMessage({ id: "m-3", text: "plain text" }),
+    ];
+    expect(isSessionWorking(settled, "ses-1")).toBe(false);
+    expect(isSessionWorking([], "ses-1")).toBe(false);
+  });
+
+  it("never counts mere selection: other sessions and null read idle", () => {
+    const messages = [
+      chatMessage({
+        id: "m-1",
+        toolCalls: [{ id: "t-1", name: "read", input: "", status: "running" }],
+      }),
+    ];
+    expect(isSessionWorking(messages, "ses-9")).toBe(false);
+    expect(isSessionWorking(messages, null)).toBe(false);
+    expect(isSessionWorking([], null)).toBe(false);
+  });
+});
+
+// WWIP: the letter badge swaps to a spinner while working; the selected
+// green dot is gone; the selected accent border stays.
+describe("watch card badge swap and dot removal (WWIP)", () => {
   async function chatCss(): Promise<string> {
     return readFile(new URL("./chat.css", import.meta.url), "utf8");
   }
 
-  function selectedAfterBlock(css: string): string {
-    const match = css.match(
-      /\.dsp-session-item:has\(\.dsp-session-select\[data-selected="true"\]\)::after\s*\{([\s\S]*?)\}/,
+  it("deletes the selected-card green dot", async () => {
+    const css = await chatCss();
+    expect(css).not.toMatch(
+      /\.dsp-session-item:has\(\.dsp-session-select\[data-selected="true"\]\)::after/,
     );
-    expect(match, "selected-card ::after rule must exist").toBeTruthy();
-    return (match as RegExpMatchArray)[1];
-  }
-
-  it("vertically centers the selected-card watching indicator", async () => {
-    const block = selectedAfterBlock(await chatCss());
-    expect(block).toMatch(/top:\s*50%/);
-    expect(block).toMatch(/translateY\(-50%\)/);
-    expect(block).not.toMatch(/top:\s*var\(--dsp-sp-2\)/);
   });
 
-  it("renders a letter-avatar badge per session, token-styled", async () => {
+  it("keeps the selected-card accent highlight, idle cards unchanged", async () => {
     const css = await chatCss();
+    const selected = css.match(
+      /\.dsp-session-item:has\(\.dsp-session-select\[data-selected="true"\]\)\s*\{([\s\S]*?)\}/,
+    );
+    expect(selected, "selected-card accent rule must remain").toBeTruthy();
+    expect((selected as RegExpMatchArray)[1]).toContain("var(--dsp-accent)");
     expect(css).toContain(".dsp-session-badge");
     expect(css).toContain(".dsp-session-title");
-    expect(css).toContain("border-radius: 50%");
     expect(css).toContain("text-overflow: ellipsis");
   });
 
-  it("wires the pulse keyframes to the watched card (CSS only)", async () => {
+  it("swaps the badge for a CSS-only spinner while working", async () => {
     const css = await chatCss();
-    expect(css).toContain("@keyframes dsp-pulse");
-    const watchedBadge = css.match(
-      /\.dsp-session-item:has\(\.dsp-session-select\[data-selected="true"\]\) \.dsp-session-badge\s*\{([\s\S]*?)\}/,
+    expect(css).toContain(".dsp-spinner");
+    expect(css).toContain("@keyframes dsp-spin");
+    expect(css).toContain(".dsp-session-badge[data-working=");
+    const spinner = css.match(/\.dsp-spinner\s*\{([\s\S]*?)\}/);
+    expect(spinner, ".dsp-spinner rule must exist").toBeTruthy();
+    expect((spinner as RegExpMatchArray)[1]).toContain("border-radius: 50%");
+    const animated = css.match(
+      /\.dsp-session-badge\[data-working="true"\] \.dsp-spinner\s*\{([\s\S]*?)\}/,
     );
-    expect(watchedBadge, "watched-card badge rule must exist").toBeTruthy();
-    expect((watchedBadge as RegExpMatchArray)[1]).toContain("animation: dsp-pulse");
-    expect(selectedAfterBlock(css)).toContain("animation: dsp-pulse");
+    expect(animated, "working badge must animate the spinner").toBeTruthy();
+    expect((animated as RegExpMatchArray)[1]).toContain("animation: dsp-spin");
   });
 
-  it("keeps badge styles on theme tokens with no emoji or images", async () => {
+  it("never animates on selection alone", async () => {
+    const css = await chatCss();
+    expect(css).not.toMatch(/data-selected="true"[^}]*animation:/);
+  });
+
+  it("keeps spinner styles on theme tokens with no emoji or images", async () => {
     const css = await chatCss();
     expect(css).not.toContain("url(");
-    for (const token of ["--dsp-accent", "--dsp-bg", "--dsp-surface-2", "--dsp-muted"]) {
+    for (const token of ["--dsp-accent", "--dsp-border", "--dsp-surface-2"]) {
       expect(css).toContain(token);
     }
     expect(css).toContain("prefers-reduced-motion");
@@ -59,13 +131,17 @@ describe("watch card indicator and badges (REQ-03/REQ-04)", () => {
     expect(sessionBadgeLetter("")).toBe("?");
   });
 
-  it("keeps session wiring: testids, aria-label, title, data-selected", async () => {
+  it("keeps session wiring: testids, aria working text, data-working", async () => {
     const app = await readFile(new URL("../App.tsx", import.meta.url), "utf8");
     expect(app).toContain('data-testid="session-list"');
     expect(app).toContain("aria-pressed");
     expect(app).toContain("data-selected");
-    expect(app).toContain("title={session.title}");
+    expect(app).toContain("data-working");
     expect(app).toContain("dsp-session-badge");
+    expect(app).toContain("dsp-spinner");
+    expect(app).toContain("isSessionWorking(messages, session.id)");
     expect(app).toContain("sessionBadgeLetter(session.title)");
+    expect(app).toContain("watch ${session.id} working");
+    expect(app).toContain('title={session.title}');
   });
 });
