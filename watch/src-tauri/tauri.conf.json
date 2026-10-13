@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Dispatch",
-  "version": "0.1.1",
-  "identifier": "ai.dispatch.app",
+  "productName": "Watch",
+  "version": "0.1.2",
+  "identifier": "ai.watch.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Dispatch",
+        "title": "Watch",
         "width": 1280,
         "height": 800
       }
@@ -33,7 +33,7 @@
     ],
     "publisher": "bloomstick",
     "category": "DeveloperTool",
-    "shortDescription": "Dispatch - unofficial advanced UI wrapper for OpenCode",
+    "shortDescription": "Watch - unofficial advanced UI wrapper for OpenCode",
     "windows": {
       "nsis": {
         "installMode": "currentUser"

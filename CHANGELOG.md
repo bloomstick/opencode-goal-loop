@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- `watch/` 0.1.2: Dispatch renamed to Watch (title, productName,
+  `ai.watch.app` identifier, npm + Cargo names) + release actions past
+  Node 20 (checkout/setup-node v5, action-gh-release v3).
+
 - `watch/` 0.1.1: chat list polish (session cards, live badge, WIP
   indicators, dead CSS pruned) + refreshed `docs/watch.png` showcase shot.
 
