@@ -1,8 +1,14 @@
-# Dispatch — release build (P-DSP-15)
+# Watch -- release build
 #
-# Runs ONLY on `v*` tag push + manual `workflow_dispatch` (test the build
-# without cutting a release). Never on schedule, never on every push.
-# Tagging + release cut is the human's manual step; this workflow only builds.
+# Promoted from the watch-subdir release workflow to the repo root: a
+# workflow file inside a subdir can never trigger, so this lives at
+# .github/workflows/ and is scoped to watch/ via working-directory and
+# path prefixes.
+#
+# Runs ONLY on `watch-v*` tag push + manual `workflow_dispatch` (test the
+# build without cutting a release). Never on schedule, never on every push.
+# Tagging + release cut is the human's manual step (first tag: watch-v0.1.0);
+# this workflow only builds.
 #
 # Action pick: softprops/action-gh-release over tauri-apps/tauri-action.
 # tauri-action bundles build+release inside one opaque step, hiding toolchain,
@@ -11,13 +17,16 @@
 # caching, gates, and the version check stay visible and auditable. It is the
 # widely-maintained generic release-assets action with a stable API (files
 # globs, draft/prerelease flags, fail_on_unmatched_files).
+#
+# Unsigned build: no cert configured, so the Windows .exe (+ MSI) ships
+# unsigned and SmartScreen reports "Unknown publisher" (known-accepted).
 
-name: release
+name: watch-release
 
 on:
   push:
     tags:
-      - "v*"
+      - "watch-v*"
   workflow_dispatch:
 
 permissions:
@@ -27,6 +36,9 @@ jobs:
   release:
     runs-on: windows-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: watch
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,16 +47,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm # keyed by package-lock.json
+          cache: npm # keyed by the lockfile below
+          cache-dependency-path: watch/package-lock.json
 
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      # Caches cargo registry + src-tauri/target, keyed by Cargo.lock.
+      # Caches cargo registry + watch/src-tauri/target, keyed by Cargo.lock.
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri -> target
+          workspaces: watch/src-tauri -> target
 
       - name: Version consistency check
         shell: pwsh
@@ -61,7 +74,7 @@ jobs:
             exit 1
           }
           if ($refType -eq "tag") {
-            $expected = $refName -replace '^v', ''
+            $expected = $refName -replace '^watch-v', ''
             if ($pkg -ne $expected) {
               Write-Error "Tag/version mismatch: tag=$refName expected=$expected package.json=$pkg"
               exit 1
@@ -86,6 +99,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            src-tauri/target/release/bundle/nsis/*-setup.exe
-            src-tauri/target/release/bundle/msi/*.msi
+            watch/src-tauri/target/release/bundle/nsis/*-setup.exe
+            watch/src-tauri/target/release/bundle/msi/*.msi
           fail_on_unmatched_files: true
