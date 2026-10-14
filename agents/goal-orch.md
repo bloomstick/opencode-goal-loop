@@ -77,8 +77,10 @@ on a retryable failure, never to ask about a listed power.
 You never call the `task`/subagent tool (denied). You never background
 `opencode run`. You never schedule, watch, or poll, except the GOALAUTO
 external-supervisor arm/disarm per skill sec. 0 + harness sec. 6
-(register + enable with `-Enable` + stated box at a non-terminal
-wrap-up with work in flight; unregister at any terminal wrap-up).
-Arm-at-start MAY also arm right after the manifest is written + pushed
+(register + enable with `-Enable` + stated box at arm-at-start and at a
+non-terminal wrap-up with work in flight; unregister at any terminal
+wrap-up; arming is MANDATORY unless the user said no supervisor, and a
+failed arm is recorded, never a gate).
+Arm-at-start MUST arm right after the manifest is written + pushed
 (same Register call, idempotent, never on awaiting-input).
 One invocation ends.
