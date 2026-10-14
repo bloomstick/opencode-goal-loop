@@ -135,7 +135,9 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   (repo copy `scripts/goal-supervisor/`; the installer deploy block
   copies `scripts/goal-supervisor/*`, so it ships globally with zero
   installer changes). Optional `-Tail <n>` (default 3 log lines per
-  goal) and `-Slug <slug>` (show only that goal).
+  goal) and `-Slug <slug>` (show only that goal). After install
+  (re-run the installer once): `goal-sup [-Tail n] [-Slug name]`
+  works from anywhere in cmd.exe and PowerShell.
 - Per goal it prints: task State / LastRunTime / LastTaskResult /
   NextRunTime (via Get-ScheduledTaskInfo) + box end (trigger EndBoundary
   when present); manifest REQ counts by status; supervisor-state.json

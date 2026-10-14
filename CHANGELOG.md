@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- `goal-sup`: PATH shim + installer PATH ensure (REQ-01, 2026-10-14):
+  new `scripts/goal-supervisor/goal-sup.cmd` forwards all args to the
+  global `Get-GoalSupervisors.ps1`; the installer appends the global
+  supervisor dir to the USER PATH once (idempotent, no admin) and
+  prints one PATH line plus a restart-shell note. After install
+  (re-run once): `goal-sup [-Tail n] [-Slug name]` from anywhere.
+
 - `goal-supervisor`: status command (REQ-01, 2026-10-14):
   `scripts/goal-supervisor/Get-GoalSupervisors.ps1` answers "are my
   supervisors running": one block per `goal-supervisor-*` task (State /
