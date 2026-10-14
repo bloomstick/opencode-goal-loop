@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+- `goal-loop`: bounded driver loop (WDRV, always terminates): after EVERY
+  foreground run the orchestrator verifies three checks (report block
+  last in the exact sec. 3 order, worker branch pushed to origin, every
+  numbered acceptance item met with proof) and re-fires the SAME saved
+  prompt file + order verbatim on ANY failure. Budget: max 3 re-fires
+  per REQ (1 initial + up to 3 = at most 4 runs, `re-fires: <n>/3` in
+  the Runs record with `run<N>`/`re-fire<N>` lines); budget exhausted
+  means NEVER a 4th fire: mark the REQ `blocked` with the evidence,
+  land whatever passed per LAND, report `blocked` per sec. 6 (symmetric
+  to DONE, still carrying the `Landed:` line). New sec. 3 `never-yield`
+  worker clause (no DONE/`blocked`/report claim before EVERY item is
+  met with proof; no-progress turn is not completion; report block last
+  or the run counts as failed). Termination paths: all-done,
+  blocked-on-budget, restart-mid-loop via RESUME (re-fire count carries
+  over; `done` never re-fired, `blocked` resumes as `blocked` unless
+  the user re-opens it with a fresh budget). No timers/polling/hooks.
+
 - `goal-loop`: RESUME phase (crash-safe continuation): manifest is
   resumable state (per-REQ status `pending`|`dispatched`|`done`, Runs
   record per dispatch with branch + prompt-file path + order text +
