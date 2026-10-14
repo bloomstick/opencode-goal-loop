@@ -162,15 +162,14 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
      sec. 3 order; (b) worker branch pushed to origin (tip visible via
      `git ls-remote origin <worker-branch>`); (c) every numbered
      acceptance item met with proof (commands + outputs, files checked).
-   A TRANSIENT failure triggers bounded backoff INSIDE the turn: print
-   one progress line per wait, wait, then re-dispatch the identical run
-   (same prompt + order: the SAME attempt, ZERO re-fire
-   budget). Max 3 transient retries per run with growing waits (2 min,
-   then 5 min, then 10 min); waits are fixed sleeps announced up front,
-   never condition polling, never schedules except the GOALAUTO
+   A TRANSIENT failure triggers an immediate identical re-dispatch
+   INSIDE the turn (same prompt + order: the SAME attempt, ZERO re-fire
+   budget). No waits, no sleeps: user order 2026-10-15 removed all
+   backoff waits outright. Max 3 transient retries per run, back to
+   back; never condition polling, never schedules except the GOALAUTO
    external-supervisor arm per sec. 0, never unbounded.
    Record each as a `retry<N>:` line with `retries: <n>/3` in the Runs
-   record (sec. 5), commit AND push the goal branch per wait cycle. When
+   record (sec. 5), commit AND push the goal branch per retry. When
    all 3 transient retries are exhausted, NEVER wait a 4th time: mark
    the REQ `blocked-transient` with the evidence (transient signature +
    last outputs), commit AND push the goal branch, stop dispatching that
@@ -341,7 +340,7 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 ### REQ-02
 - dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" re-fires: <n>/3 retries: <m>/3
 - run1: <date> pushed: <sha or FAIL> | report: <ok or FAIL-missing> | acceptance: <ok or FAIL-which-item>
-- retry1: <date> transient: <rate-limit | conn-reset | 5xx-timeout | restart-signature> waited: <2min> | retries: 1/3
+- retry1: <date> transient: <rate-limit | conn-reset | 5xx-timeout | restart-signature> | retries: 1/3
 - re-fire1: <date> result: <ok or FAIL-which-check> | re-fires: 1/3 | retries: <m>/3
 - re-fire2: <date> result: <ok or FAIL-which-check> | re-fires: 2/3 | retries: <m>/3
 - pushed: <sha or none-yet> (<date>) | report-tail: <last report lines>
