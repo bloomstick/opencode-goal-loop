@@ -69,6 +69,8 @@
   Board/GitHub/vision/scripts removed). Run via `watch/docs/WATCH.md`;
   not part of global install.
 
+- Proved: driver loop runs dispatch-to-DONE with zero manual continues (smoke SDRV, single REQ, verify-after-run green first try).
+
 ## [0.1.0] — 2026-10-13
 
 - Initial `goal-loop` skill, `/goal` command, `goal-orch` / `goal-worker`
