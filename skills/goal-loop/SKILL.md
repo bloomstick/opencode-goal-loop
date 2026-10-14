@@ -3,16 +3,12 @@ name: goal-loop
 description: Fully automated coding loop for OpenCode without plugins. Use when asked to run /goal, drive requirements-to-verified-code with child agents via foreground opencode run, or replace crash-prone goal plugins on free-tier models with no subagent access.
 ---
 
-# goal-loop — automated coding loop with child agents, no plugins
+# goal-loop - automated coding loop with child agents, no plugins
 
-Markdown-only replacement for `opencode-goal-plugin` variants. There is no
-TypeScript, no hooks, no server code — so there is nothing to crash the
-OpenCode service. History: the service log shows `opencode-goal-plugin@0.11.0`
-(`william-ricchiuti/OpenCode-goal-plugin#81`, silent service death) loaded on
-2026-10-10; no trace of the `prevalentWare` variant ever installed.
-Separately, server-held background `opencode run` children restarted the
-server 3 times on 2026-10-12. This skill avoids all three: no hooks, no
-background children, plain-manifest state only.
+Markdown-only replacement for crash-prone goal plugins: no TypeScript,
+no hooks, no server code, no background children, plain-manifest state
+only. Incident history and rationale live in the trailing Appendix
+(non-normative); the core below reads end-to-end without it.
 
 Free-tier constraint: the `task` tool (subagents) is unavailable. All child
 work runs as foreground `opencode run` processes, never as subagents.
@@ -68,14 +64,9 @@ No silent stop, no infinite loop:
 at most 1 initial run + 3 re-fires = 4 runs per REQ (WORK failures
 only), plus at most 3 transient retries per run that consume ZERO
 re-fire budget (sec. 2 step 5 TRANSIENT vs WORK, `retries: <n>/3`
-alongside `re-fires: <n>/3`). A run that exhausts its transient
-retries marks its REQ `blocked-transient` + wrap-up (sec. 6, still
-with the `Landed:` line). The terminal paths are: (a) all-done,
-(b) blocked-on-budget, (c) restart-mid-loop via sec. 8 RESUME (state
-survives on the goal branch + worker branches, loop continues to DONE
-or blocked on the next human turn; nothing runs unattended),
-(d) parked-awaiting-input (report names the REQ + pending question, then
-stop; the human answer clears it per sec. 5; nothing runs unattended).
+alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
+(b) blocked-on-budget, (c) resume-mid-loop via sec. 8 RESUME,
+(d) parked-awaiting-input per sec. 5.
 
 1. **Clarify / Resume.** If a manifest already exists for the goal
    (`.opencode/goal-loop/<slug>/reqs-manifest.md` - including the first
@@ -99,58 +90,53 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    clarify/resume, read standing orders (global config copy deployed
    by `Install-GoalLoop.ps1`, falling back to the repo
    `standing-orders.md` template) and never gate on a listed power
-   again; anything outside the list still asks. Attachments (REQ-01a):
-   when the `/goal` invocation carries user-attached files, record each
-   as an ORIGINAL absolute path in the manifest Attachments block
-   (sec. 5), one per line, in the order received, before any dispatch;
-   an empty set records `Attachments: none` (no copies into the goal
-   dir). Caveat: a moved or deleted file breaks a later re-fire; the
-   Runs record carries the exact `-f` set so a re-fire is byte-identical,
-   and a missing file at re-fire time is evidence per step 5, never silent.
+   again; anything outside the list still asks. Attachments: record each
+   `/goal` user-attached file as an ORIGINAL absolute path in the manifest
+   Attachments block (sec. 5), one per line, in received order, before any
+   dispatch (`Attachments: none` when empty, no copies). Re-fire and
+   missing-file rules: see step 5.
 2. **Manifest.** Write `reqs-manifest.md` (see sec. 5) under
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
    chat memory, is the acceptance record and the resumable state for
    sec. 8 RESUME. Commit AND push the goal branch after every manifest
-   mutation (see sec. 5 rules). Arm-at-start (same GOALAUTO sec. 0
-   exception): after the manifest is written + pushed, the orchestrator
-   MAY arm the EXTERNAL supervisor (same Register-GoalSupervisor.ps1: global copy `~/.config/opencode/goal-supervisor/`,
-   else repo `scripts/goal-supervisor/`, with `-Enable` and a stated time box, per harness sec. 6; record
-   task name + box in Runs/Log + report). Arming is idempotent
-   (Register unregisters the name first). Never arm while any REQ is
-   `awaiting-input`; disarm-at-terminal per step 9 is unchanged.
-3. **DAG.** Map dependencies. No-dependency requirements may run parallel;
-   dependent ones run in order. Same-file edits always sequential.
+   mutation (see sec. 5 rules). Arm-at-start (GOALAUTO sec. 0 exception):
+   after the manifest is written + pushed, the orchestrator MAY arm the
+   EXTERNAL supervisor; record task name + box in Runs/Log + report (full
+   call, idempotency, and never-arm-on-`awaiting-input`: see step 9).
+3. **DAG.** Map dependencies. No-dependency requirements may run parallel
+   (bounded fan-out: see step 4); dependent ones run in order. Same-file
+   edits always sequential.
 4. **Dispatch.** Fetch `origin` first; base every worker branch on the
-   `origin/main` tip so stale bases cannot strand work. One worktree +
-   branch per worker (see sec. 4). Branch-per-worker stays mandatory even though
-   the solo flow uses no PRs (isolation + remote backup before merge).
-   Write an eight-part worker prompt file (see sec. 3) saved under
-   `prompts/` (see sec. 5), record the run in the manifest, commit AND
-   push the goal branch, then run it foreground and collect
-   the report block. Forward attachments (REQ-01b): append one `-f` per
-   manifest Attachments path AFTER `-f <prompt-file>`, in manifest order:
-   `opencode run --auto --agent goal-worker -f <prompt-file> [-f <attachment>...] "<order>"`
-   (sec. 4). Record the exact set in the Runs record `files:` list
-   (sec. 5); an empty set records `files: none` and dispatches with
-   `-f <prompt-file>` only. Every re-fire reproduces the identical `-f`
-   set byte-identical with no edits; a missing file at re-fire time is
-   evidence per step 5, never silent (never drop the `-f`).
-   Tiny-task fast path (user order 2026-10-14: save tokens/time on
-   trivial actions): the orchestrator MAY execute a requirement inline
+   `origin/main` tip. One worktree + branch per worker (see sec. 4;
+   mandatory for isolation + remote backup; per-worker branches and the
+   step 5 budgets hold under fan-out too). Write a deltas-only worker
+   prompt file (see sec. 3) saved under `prompts/` (see sec. 5), record
+   the run in the manifest, commit AND push the goal branch, then run it
+   foreground and collect the report block. The prompt Preamble names the
+   EXACT skill sections and files the worker must read (e.g. sec. 5 +
+   sec. 8 only); the worker reads nothing beyond that list without
+   recording why. Forward attachments: append one `-f` per manifest
+   Attachments path AFTER `-f <prompt-file>`, in manifest order (sec. 4);
+   record the exact set in the Runs record `files:` list (sec. 5,
+   `files: none` when empty). Re-fire rules and the missing-file rule:
+   see step 5. Bounded fan-out: file-disjoint REQs MAY dispatch in
+   parallel, at most 3 concurrent FOREGROUND runs in one shell call that
+   waits for all of them (never background persistence: server-held
+   background children restarted the server 3 times on 2026-10-12, see
+   Appendix). Same-file edits stay sequential.
+   Tiny-task fast path: the orchestrator MAY execute a requirement inline
    with NO worker iff ALL hold: touches at most 2 files of substantive
-   change (the standard skill+agent+changelog trio counts as one plus
-   mechanical mirrors), expected diff at most ~30 added lines, no cross-file consistency
-   hunt (more than ~3 places to reconcile means dispatch), verification
+   change, expected diff at most ~30 added lines, no cross-file hunt
+   (more than ~3 places to reconcile means dispatch), verification
    runnable inline in under ~10 min foreground with quoted outputs, and
-   nothing touching live machine state (no scheduler/registry/PATH/
-   installs - those always dispatch). Inline work keeps the same bar:
-   manifest `inline:` Runs line, commit AND push the goal branch,
-   every acceptance item verified with proof, SLOC reported.
-   Escalation: past ~15 min effort or past any cap, STOP inline and
-   dispatch a worker with the saved prompt (no sunk-cost sprawl); a
-   failed inline attempt dispatches the worker as the initial run,
-   noted in Runs. Never inline anything the NEVER list forbids,
-   multi-file refactors, live experiments, or landing/merging itself.
+   nothing touching live machine state (those always dispatch). Inline
+   work keeps the same bar: manifest `inline:` Runs line, commit AND push
+   the goal branch, every acceptance item verified with proof, SLOC
+   reported. Past ~15 min effort or past any cap, STOP inline and
+   dispatch a worker with the saved prompt; a failed inline attempt
+   dispatches the worker as the initial run, noted in Runs. Never inline
+   anything the NEVER list forbids, multi-file refactors, live
+   experiments, or landing/merging itself.
 5. **Verify-after-every-run (bounded driver).** After EVERY foreground
    run, before any integrate, classify the outcome first:
    - TRANSIENT failure means the dispatch itself died before a
@@ -163,38 +149,34 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
      `git ls-remote origin <worker-branch>`); (c) every numbered
      acceptance item met with proof (commands + outputs, files checked).
    A TRANSIENT failure triggers bounded backoff INSIDE the turn: print
-   one progress line per wait (so the turn never looks dead), wait, then
-   re-dispatch the identical run (same saved prompt file + same recorded
-   order text verbatim + same recorded `files:` `-f` set, counts as the SAME attempt, consumes ZERO
-   re-fire budget). Max 3 transient retries per run with growing waits
-   (2 min, then 5 min, then 10 min); waits are fixed sleeps announced up
-   front, never condition polling, never schedules except the GOALAUTO
+   one progress line per wait, wait, then re-dispatch the identical run
+   (same prompt + order + `-f` set: the SAME attempt, ZERO re-fire
+   budget). Max 3 transient retries per run with growing waits (2 min,
+   then 5 min, then 10 min); waits are fixed sleeps announced up front,
+   never condition polling, never schedules except the GOALAUTO
    external-supervisor arm per sec. 0, never unbounded.
    Record each as a `retry<N>:` line with `retries: <n>/3` in the Runs
    record (sec. 5), commit AND push the goal branch per wait cycle. When
    all 3 transient retries are exhausted, NEVER wait a 4th time: mark
-   the REQ `blocked-transient` with the evidence (which transient
-   signature + last outputs), commit AND push the goal branch, stop
-   dispatching that REQ, and go to wrap-up (verify + land whatever
-   passed per sec. 7, report per sec. 6, still with the `Landed:` line).
+   the REQ `blocked-transient` with the evidence (transient signature +
+   last outputs), commit AND push the goal branch, stop dispatching that
+   REQ, and go to wrap-up (steps 6-9, still with the `Landed:` line).
    A server restart can still kill the turn itself mid-backoff: that
    path stays covered ONLY by sec. 8 RESUME (state is on the goal branch
    + worker branches), never by new autonomy except the GOALAUTO
    external supervisor per sec. 0.
-   On a WORK failure (completed run, any check failing), re-fire the SAME saved prompt file + the SAME
-   recorded order text verbatim + the SAME recorded `files:` `-f` set (byte-identical, no edits), foreground
-   per sec. 4. Budget: max 3 re-fires per REQ (1 initial run + up to 3
-   re-fires = at most 4 runs per REQ), counted in the manifest Runs
-   record as `re-fires: <n>/3` alongside `retries: <n>/3` (sec. 5, separate
-   counters, never interchangeable). Each re-fire appends a
+   On a WORK failure (completed run, any check failing), re-fire the SAME
+   saved prompt + order + `-f` set (byte-identical, no edits), foreground
+   per sec. 4. Budget: max 3 re-fires per REQ, counted in the manifest
+   Runs record as `re-fires: <n>/3` alongside `retries: <n>/3` (sec. 5,
+   separate counters, never interchangeable). Each re-fire appends a
    `re-fire<N>:` line, commits AND pushes the goal branch, then
-   dispatches. When the budget is exhausted (3 re-fires used and the
-   run still fails), NEVER fire a 4th time: mark the REQ `blocked`
-   with the evidence (which check failed + last outputs), commit AND
-   push the goal branch, stop dispatching that REQ, and go to wrap-up
-   (verify + land whatever passed per sec. 7, report `blocked` per
-   sec. 6). Re-fire is per-REQ pre-integration only: it never re-fires
-   a `done` or `awaiting-input` REQ and never bypasses the sec. 7 LAND proof.
+   dispatches. When the budget is exhausted, NEVER fire a 4th time: mark
+   the REQ `blocked` with the evidence (which check failed + last
+   outputs), commit AND push the goal branch, stop dispatching that REQ,
+   and go to wrap-up (steps 6-9, report `blocked` per sec. 6). Re-fire
+   is per-REQ pre-integration only: it never re-fires a `done` or
+   `awaiting-input` REQ and never bypasses the sec. 7 LAND proof.
    Missing attachment at (re-)fire time is evidence, never silent: when a
    dispatch cannot launch because an `-f` path is gone, classify per this
    step (TRANSIENT while the dispatch died before a verifiable report was
@@ -202,7 +184,8 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    which path was missing with the last output.
 6. **Integrate sequentially.** Merge one worker at a time onto
    local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
-   feeds recovered branches here), resolving conflicts,
+   feeds recovered branches here; fan-out runs land here one by one),
+   resolving conflicts,
    re-running the named green suite after each. Fix cross-worker seams
    yourself. Only integrate runs that passed step 5; `blocked`,
    `blocked-transient`, and `awaiting-input` REQs are skipped (their
@@ -226,75 +209,58 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    plus the pending human question. No
    `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
    for the next task.
-   Arm-at-start (same GOALAUTO sec. 0 exception): after the manifest is
-   written + pushed, the orchestrator MAY arm the EXTERNAL supervisor
-   (same Register call: global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`,
-   stated box, record task + box in Runs/Log);
-   idempotent (Register unregisters the name first).
-   Arm (non-terminal wrap-up only, GOALAUTO sec. 0 exception): when the
-   turn parks with actionable non-blocked non-awaiting REQs still in
-   flight, the orchestrator MAY register + enable the EXTERNAL
-   supervisor (Register-GoalSupervisor.ps1: global copy `~/.config/opencode/goal-supervisor/`, else repo
-   `scripts/goal-supervisor/`, with `-Enable` and a stated
-   time box, per harness sec. 6), and records task name + box in
-   Runs/Log + report. Disarm (terminal wrap-up): at DONE / `blocked` /
+   Arm (GOALAUTO sec. 0 exception, non-terminal wrap-up only): when the
+   turn parks with actionable non-blocked non-awaiting REQs in flight
+   (including arm-at-start right after the manifest is written + pushed),
+   the orchestrator MAY register + enable the EXTERNAL supervisor via
+   Register-GoalSupervisor.ps1 with `-Enable` and a stated time box (per
+   harness sec. 6; idempotent; record task name + box in Runs/Log +
+   report). Disarm (terminal wrap-up): at DONE / `blocked` /
    `blocked-transient`, the orchestrator MUST unregister the supervisor
-   if armed, and records + reports it. Nothing keeps running after a
-   terminal wrap-up (disarm is part of it) or after a parked
-   `awaiting-input` turn (never armed).
+   if armed, and records + reports it. Never arm while any REQ is
+   `awaiting-input`; nothing keeps running after a terminal wrap-up or a
+   parked `awaiting-input` turn.
 
-## 3. Worker prompt file (eight parts, in order)
+## 3. Worker prompt file (deltas-only)
 
 Write to a saved prompt file under the goal dir (never $TEMP only),
 e.g. `.opencode/goal-loop/<slug>/prompts/REQ-01.<code>.md`. The saved
 file plus the recorded order text plus the recorded `files:` `-f` set is
-the byte-identical re-fire source
-for sec. 8 RESUME; record its path in the manifest Runs record (sec. 5)
-before dispatch:
+the byte-identical re-fire source for sec. 8 RESUME; record its path in
+the manifest Runs record (sec. 5) before dispatch.
 
-1. **Preamble:** base SHA + `git log --oneline -3` verify, docs to read
-   first (ordered), skill to load (`goal-loop`).
+Invariant boilerplate lives once in `agents/goal-worker.md` (heartbeat
+shape, landing report-block shape, never-background, no-`task` tool,
+Windows notes, proof norms, never-yield): do NOT repeat it in the prompt.
+Prompt + agent file is the worker's full context; a worker with ONLY the
+two has everything. Canonical report-block field order (checked as the
+last stdout block per sec. 2 step 5): CODE / Added / SLOC /
+Tests-proofs / Caveats.
+
+Scoped reads: the Preamble names the EXACT skill sections and files the
+worker must read (e.g. `sec. 5 + sec. 8 only`); the worker reads nothing
+beyond that list without recording why in its report.
+
+The prompt carries deltas only, in order:
+
+1. **Preamble:** base SHA + `git log --oneline -3` verify, ordered read
+   list (scoped per above), skill to load (`goal-loop`).
 2. **Context:** what exists, why this task, what is out of scope (name the
    other workers/requirements).
 3. **Scope:** allowed files ONLY (new file or explicit list) + numbered
-   requirements + verification path per requirement. Attachments
-   (REQ-01c): user-attached files arrive as message attachments AND are
-   editable inputs for that dispatch, including outside-the-repo paths;
-   they join the worker editable scope for that dispatch only, while the
+   requirements + verification path per requirement. Attachments:
+   user-attached files arrive as message attachments AND are editable
+   inputs for that dispatch, including outside-the-repo paths; they join
+   the worker editable scope for that dispatch only, while the
    allowed-files list still governs everything else. Branch-only still
    holds (workers never push `main`).
-4. **Forbidden:** branch-only, no main push, no other files (except the
-   dispatched Attachments `-f` set, editable for that dispatch per Scope
-   item 3), no new deps,
-   no schedules/services/watchers/polling (workers NEVER arm the
-   GOALAUTO supervisor; arm/disarm is orchestrator-only per sec. 0),
-   no other repos, no `task`
-   tool (ask the orchestrator via the report instead). Runs FOREGROUND:
-   never background itself, stop every child process at ship.
-5. **Heartbeat:** progress line per subtask boundary in session output
-   (silence past the timeout = killed run, branch/worktree kept).
-6. **Acceptance:** owning worktree dir, static check clean
-   (`flutter analyze` / `tsc` / `bun run typecheck` per repo), named green
-   suite with exact commands, SLOC delta report.
-7. **Landing + report shape**, exact order, last in stdout:
-   ```
-   <CODE> — <title>
-   Added: <files>
-   SLOC: <+/-> 
-   Tests/proofs: <commands + outputs>
-   Caveats: <none or list>
-   ```
-   Commit on worker branch, push branch ONLY, stop every child process.
-8. **Never-yield:** never claim DONE, `blocked`, or any report before
-   EVERY numbered acceptance item is met with proof (command output
-   or file check per item, quoted in the report). A turn that
-   produces no progress is not completion: keep working, or state
-   the concrete blocker (which item, what was tried, last output).
-   The sec. 3 report block goes last in stdout or the run counts as
-   failed and will be re-fired per sec. 2 step 5 (max 3 re-fires per
-   REQ, then the orchestrator marks the REQ `blocked`).
+4. **Acceptance deltas:** owning worktree dir, named green suite with
+   exact commands, SLOC delta report. Proof norms (see also sec. 6):
+   trimmed command outputs (`Select-Object -First N`) plus hashes over
+   the full dumps, quoted; full terminal scrollback is not evidence.
 
-Keep prompts precise — workers get no other context.
+Keep prompt deltas precise - the prompt plus `agents/goal-worker.md` is
+the worker's full context.
 
 ## 4. Dispatch (foreground only)
 
@@ -308,21 +274,18 @@ opencode run --auto --agent goal-worker -f <prompt-file> [-f <attachment>...] "<
 `.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
 <order> must match the manifest Runs record verbatim so a re-fire is
 byte-identical. Each <attachment> is one manifest Attachments absolute
-path, appended AFTER `-f <prompt-file>` in manifest order (REQ-01b);
-with no attachments dispatch with `-f <prompt-file>` only. The Runs
-record `files:` list carries the exact `-f` set (sec. 5); every re-fire
-reproduces it byte-identical with no edits, and a missing file at
-re-fire time is evidence per sec. 2 step 5, never silent. `-f` is
-repeatable per `opencode run --help` (`File(s) to attach to message`).
-The supervisor re-invokes the ORCHESTRATOR with the manifest Attachments
-`-f` set appended, so the fresh session receives the original user
-files; the orchestrator re-reads the manifest for the rest.
+path, appended AFTER `-f <prompt-file>` in manifest order; the Runs
+record `files:` list carries the exact `-f` set (sec. 5; re-fire and
+missing-file rules per sec. 2 step 5). The supervisor re-invokes the
+ORCHESTRATOR with the manifest Attachments `-f` set appended; the
+orchestrator re-reads the manifest for the rest.
 
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
 `opencode run` as a foreground process so the server never holds background
 children): `Invoke-Dispatch.ps1` for one worker, `Invoke-Fanout.ps1` for
-2+ parallel workers, one foreground `shell` call, `-DryRun` first when
-changing the scripts. See the `delegate` skill for exact invocations.
+2+ parallel workers, one foreground `shell` call that waits, `-DryRun`
+first when changing the scripts. See the `delegate` skill for exact
+invocations.
 
 To stop a worker there is no kill API: read its transcript, then abandon
 its branch/worktree. The fan-out `-Timeout` cap stops hung jobs.
@@ -399,35 +362,28 @@ Rules:
   it to `dispatched` per the status rule above, never a re-fire, never
   RESUME, never the supervisor.
 - Budget accounting: every sec. 2 step 5 verify + re-fire + transient
-  retry updates the Runs record (`run<N>` / `re-fire<N>` / `retry<N>`
-  lines + `re-fires: <n>/3` alongside `retries: <m>/3`), then commits AND
-  pushes the goal branch. The two counters are separate and never
-  interchangeable: transient retries consume ZERO re-fire budget and a
-  re-fire never resets the retry count. Caps are numeric and fixed:
-  3 re-fires per REQ and 3 transient retries per run in sec. 2, sec. 5,
-  and sec. 6 alike. A 4th fire or a 4th wait is never allowed; WORK
-  budget exhausted means `blocked` + wrap-up, transient retries
-  exhausted means `blocked-transient` + wrap-up (both still land
-  whatever passed and report per sec. 6 with the `Landed:` line).
-- Attachments rule (REQ-01): the Attachments block holds ORIGINAL absolute
-  paths in received order (`Attachments: none` when empty); each dispatch
-  Runs line carries `files:` with the exact `-f` set in dispatch order.
-  Re-fires and sec. 8 RESUME reproduce the identical `-f` set
-  byte-identical with no edits and unchanged budgets (never drop a
-  missing `-f`; a missing file is evidence per sec. 2 step 5, never
-  silent). Attached paths join the worker editable scope for that
-  dispatch only, including outside-the-repo paths; the allowed-files list
-  still governs everything else and branch-only still holds (workers never
-  push `main`). The supervisor re-invokes the ORCHESTRATOR with the
-  manifest Attachments `-f` set appended, so the fresh session receives
-  the original user files; the orchestrator re-reads the manifest for
-  the rest.
+  retry updates the Runs record, then commits AND pushes the goal
+  branch. The two counters (`re-fires: <n>/3`, `retries: <m>/3`) are
+  separate and never interchangeable. A 4th fire or a 4th wait is never
+  allowed (see step 5 for the `blocked` / `blocked-transient` wrap-ups,
+  still with the `Landed:` line).
+- Attachments rule: the Attachments block holds ORIGINAL absolute paths
+  in received order (`Attachments: none` when empty); each dispatch Runs
+  line carries `files:` with the exact `-f` set in dispatch order.
+  Re-fires and sec. 8 RESUME reproduce it byte-identical (a missing file
+  is evidence per sec. 2 step 5, never silent). Attached paths join the
+  worker editable scope for that dispatch only (sec. 3); branch-only
+  still holds. The supervisor re-invokes the ORCHESTRATOR with the
+  manifest Attachments `-f` set appended.
 
 ## 6. Report
 
 Per worker + integration: task-code, files, SLOC structural-vs-cheap
 split, commands + outputs, `Caveats: none` or explicit list (unverified
-areas, risks, follow-ups). Where the GOALAUTO supervisor was armed or
+areas, risks, follow-ups). Proof norms: quote trimmed command outputs
+(`Select-Object -First N`) plus hashes over the full dumps; full
+terminal scrollback is not evidence. Where the GOALAUTO supervisor was
+armed or
 disarmed this turn, the report carries one line each:
 `Armed: goal-supervisor-<slug> box <N>h` and/or
 `Disarmed: goal-supervisor-<slug>`. Stdout MUST end with the sec. 3 report block last.
@@ -477,10 +433,9 @@ budgets per sec. 5.
 
 ## 7. LAND phase (solo flow: merge locally, push, prove — no PRs)
 
-No PRs on the solo flow: there is no branch protection and no PR CI to
-gate on, so PRs are pure roundtrips where finished work rots. The loop
-closes itself in the same invocation. Branch-per-worker is still
-mandatory (isolation + remote backup before merge).
+No PRs on the solo flow (no branch protection, no PR CI to gate on).
+The loop closes itself in the same invocation. Branch-per-worker is
+still mandatory (isolation + remote backup before merge).
 
 1. Workers pushed their branches (worker protocol, sec. 3 steps 7-8). Fetch
    first so the merge base is the live tip:
@@ -520,22 +475,19 @@ proof is unchanged and still required for DONE, for `blocked`, and for
 
 ## 8. RESUME phase (crash-safe continuation, attended only)
 
-A server restart kills the orchestrator session but the work survives:
-manifest + prompt files are committed and pushed on the goal branch, and
-worker commits are pushed on worker branches. RESUME rebuilds session
-state from disk + remote; it adds no schedules, services, watchers,
-polling loops, idle hooks, unattended retries, or background work,
-except the GOALAUTO external-supervisor arm per sec. 0.
-In-turn transient retries stay per sec. 2 step 5 only; a restart that
-kills a turn mid-backoff resumes here, and only here, from the pushed
-Runs record (`retries: <m>/3` carries over like `re-fires: <n>/3`).
-It runs only on
-a human goal turn ("continue" or a re-run of `/goal`) when a manifest
-exists. One invocation still ends at DONE, `blocked`, or
-`blocked-transient`, or at the next
-human turn after a resume that still has work in flight;
-nothing keeps running after that except an armed GOALAUTO supervisor
-per sec. 0 (disarmed at any terminal wrap-up; see sec. 0 hard rules).
+A server restart kills the orchestrator session but the work survives on
+the goal branch + worker branches. RESUME rebuilds session state from
+disk + remote; it adds nothing but the GOALAUTO external-supervisor arm
+per sec. 0 (no schedules, services, watchers, polling, idle hooks,
+unattended retries, or background work). In-turn transient retries stay
+per sec. 2 step 5 only; a restart that kills a turn mid-backoff resumes
+here, and only here, from the pushed Runs record (`retries: <m>/3`
+carries over like `re-fires: <n>/3`). RESUME runs only on a human goal
+turn ("continue" or a re-run of `/goal`) when a manifest exists. One
+invocation still ends at DONE, `blocked`, or `blocked-transient`, or at
+the next human turn with work still in flight; nothing keeps running
+after that except an armed GOALAUTO supervisor per sec. 0 (disarmed at
+any terminal wrap-up).
 
 On ANY goal turn with an existing manifest, the orchestrator MUST,
 before any new dispatch:
@@ -579,16 +531,39 @@ before any new dispatch:
    presence of pushed proof moves a REQ forward, never backward.
 
 Resume flows into LAND normally: DONE still requires the sec. 6
-`Landed:` proof (local `main` == `origin/main` plus every worker commit
-contained in `origin/main`). A resume summary alone is never DONE.
-A loop with a `blocked` or `blocked-transient` REQ still lands whatever
-passed and reports
-`blocked` per sec. 6 (symmetric to DONE, still with the `Landed:`
-line). The driver re-fire and the transient retry (sec. 2 step 5) are
-per-REQ pre-integration
-inside one invocation; RESUME never re-fires `done` and never silently
+`Landed:` proof. A resume summary alone is never DONE. A loop with a
+`blocked` or `blocked-transient` REQ still lands whatever passed and
+reports per sec. 6 (still with the `Landed:` line). The driver re-fire
+and the transient retry (sec. 2 step 5) are per-REQ pre-integration
+inside one invocation; RESUME never re-fires `done`, never silently
 re-opens `blocked` or `blocked-transient`, and never touches
-`awaiting-input` (only the human answer clears it per sec. 5).
-RESUME is the only restart
-path: it never adds autonomy beyond sec. 2 step 5 and the GOALAUTO
-external-supervisor arm per sec. 0.
+`awaiting-input` (only the human answer clears it per sec. 5). RESUME is
+the only restart path: it never adds autonomy beyond sec. 2 step 5 and
+the GOALAUTO external-supervisor arm per sec. 0.
+
+## Appendix: history and examples (non-normative)
+
+This appendix carries crash history, provenance, and rationale. It adds
+no rules: the normative core is secs. 0-8, which reads end-to-end
+without it.
+
+- Plugin crash history: `opencode-goal-plugin@0.11.0`
+  (`william-ricchiuti/OpenCode-goal-plugin#81`, silent service death)
+  was loaded on 2026-10-10; no trace of the `prevalentWare` variant was
+  ever installed. Server-held background `opencode run` children
+  restarted the server 3 times on 2026-10-12. Design answer: no hooks,
+  no background children, plain-manifest state only (see preamble).
+- GOALAUTO provenance: the sec. 0 exception was a user order of
+  2026-10-14, the ONLY exception ever granted. Register-then-enable is
+  idempotent because Register unregisters the name first.
+- Worked rationale: stale bases strand work (hence fetch + rebase on
+  `origin/main` in sec. 2 step 4); PRs on the solo flow are pure
+  roundtrips with no gate (hence merge-locally LAND in sec. 7); sunk-cost
+  sprawl kills tiny tasks (hence the ~15 min inline escalation in sec. 2
+  step 4); a moved or deleted attachment breaks byte-identical re-fire
+  (hence ORIGINAL paths + the step 5 evidence rule); silence past the
+  timeout means a killed run (hence heartbeats), and scrollback alone
+  proves nothing (hence trimmed outputs + hashes in sec. 3 and sec. 6).
+- REQ tags seen in this file's history (attachments REQ-01a/b/c, the
+  tiny-task user order of 2026-10-14) are provenance markers, not live
+  instructions.
