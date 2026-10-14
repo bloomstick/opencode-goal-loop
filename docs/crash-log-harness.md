@@ -108,3 +108,32 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
 - Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
   stands, supervisor never touches server internals, and a crash in
   the OpenCode binary is upstream-only (rollback per sec. 4).
+
+### Collector behavior (REQ-02 boot-gap crash collector)
+
+- `lastCheckUtc` in `supervisor-state.json` is updated on EVERY run,
+  including every NOOP. `-IntervalMinutes` (default 5, same default the
+  Register script uses) sets the expected cadence.
+- GAP stub: when now minus `lastCheckUtc` exceeds 3x the interval, the
+  supervisor appends one `GAP slug=... lastCheck=... gapMin=...
+  thresholdMin=...` line to `supervisor.log` and continues the normal
+  pass. Language is exact: a gap means the supervisor did not run in
+  the window, nothing more. It NEVER claims a crash. First run (epoch
+  or missing `lastCheckUtc`) initializes silently with no stub.
+- SERVER-DOWN stub: when the `opencode run` re-fire fails to launch
+  (catch path) or exits non-zero/null, the supervisor appends one
+  `SERVER-DOWN slug=... exit=... reqs=... attempts=...` line, advances
+  `lastAttemptUtc` so cooldown gates the next retry, and does NOT
+  consume MaxAttempts budget (a down server is not the goal's fault).
+  Consecutive SERVER-DOWNs never self-disable, so recovery stays
+  possible. A clean exit 0 still takes the normal REFIRE path with
+  budget consumed.
+- How the stubs feed sec. 3: each stub carries its UTC timestamp (log
+  line prefix), the affected goal/slug, and a pointer to the server-log
+  window `C:\Users\frnd\.local\share\opencode\log\opencode.log`. Manual
+  follow-up per sec. 3 means: take the stub window, pull the last 20
+  server lines before it plus the first 20 after, count `spawning
+  process` lines in-window, record git-vs-origin state, then file the
+  verdict (TRANSIENT / restart / unknown). The stubs start the paper
+  trail; the human finishes it. No autonomy beyond the existing bounded
+  re-fire; sec. 0 ban stands.

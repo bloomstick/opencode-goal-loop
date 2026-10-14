@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- `goal-supervisor`: boot-gap crash collector (REQ-02): `lastCheckUtc`
+  tracked in `supervisor-state.json` on every run including NOOP with
+  new `-IntervalMinutes` (default 5, matches the Register script); a
+  gap over 3x the interval appends one GAP stub (last check + gap
+  length + server-log window pointer, never a crash claim) and continues
+  the normal pass; a failed `opencode run` re-fire (launch exception or
+  non-zero/null exit) appends one SERVER-DOWN stub, advances cooldown,
+  consumes no MaxAttempts budget, and never self-disables on consecutive
+  SERVER-DOWNs. Collector stubs feed the harness sec. 3 incident
+  protocol (human pulls the server-log window and files the verdict).
+  No autonomy beyond the existing bounded re-fire; sec. 0 ban stands.
 - `goal-loop`: awaiting-input status (REQ-01): new per-REQ `awaiting-input`
   state for a turn parked on a human-only question (skill sec. 5: ONLY the
   human answer clears it back to `dispatched` with a new Runs entry, never
