@@ -28,6 +28,6 @@ Step 0 - init (orch-side attachments only, FIRST):
 3. Run the init script (global copy first, else the repo copy):
    $Init = "$env:USERPROFILE/.config/opencode/goal-loop/scripts/goal-init.ps1"
    if (-not (Test-Path $Init)) { $Init = "scripts/goal-init.ps1" }
-   powershell -NoProfile -File $Init -Slug <slug> -Goal "<goal>"
+   powershell -NoProfile -File $Init -Slug <slug> -Goal "<goal>" -RepoRoot "<repo-root>" (absolute repo path; the script refuses ambient-CWD operation)
 4. Quote its MACHINE block into the manifest Log. STOP on failure: if the
    script fails, stop and report - never run blind without the init proof.

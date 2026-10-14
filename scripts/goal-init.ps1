@@ -13,25 +13,36 @@
     Goal slug: lowercase letters, digits, hyphens (e.g. my-goal).
 .PARAMETER Goal
     One-line goal objective, written into the manifest skeleton.
+.PARAMETER RepoRoot
+    ABSOLUTE path of the repo root the goal lives in. Mandatory on
+    purpose: the script refuses ambient-CWD operation so it can never
+    create branches or push in whatever directory you happen to stand in.
 .EXAMPLE
-    powershell -NoProfile -File scripts/goal-init.ps1 -Slug my-goal -Goal "Ship the thing"
+    powershell -NoProfile -File scripts/goal-init.ps1 -Slug my-goal -Goal "Ship the thing" -RepoRoot "C:\work\myrepo"
 #>
 param(
   [Parameter(Mandatory=$true)][string]$Slug,
-  [Parameter(Mandatory=$true)][string]$Goal
+  [Parameter(Mandatory=$true)][string]$Goal,
+  [Parameter(Mandatory=$true)][string]$RepoRoot
 )
 $ErrorActionPreference = "Stop"
 
 if ($Slug -notmatch '^[a-z0-9]+(-[a-z0-9]+)*$') { throw "bad slug '$Slug' (want lowercase alnum + hyphens)" }
 if ([string]::IsNullOrWhiteSpace($Goal)) { throw "Goal must not be empty" }
+if (-not (Test-Path $RepoRoot -PathType Container)) { throw "RepoRoot is not a directory: '$RepoRoot'" }
 
-$Root = (& git rev-parse --show-toplevel 2>$null)
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Root)) { throw "not inside a git repo (git rev-parse --show-toplevel failed)" }
-$Root = $Root.Trim()
-Set-Location $Root
+$Root = (& git -C $RepoRoot rev-parse --show-toplevel 2>$null)
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Root)) { throw "RepoRoot is not inside a git repo: '$RepoRoot'" }
+$Root = $Root.Trim().TrimEnd('\').Replace('/', '\')
+$Given = $RepoRoot.Trim().TrimEnd('\').Replace('/', '\')
+if ($Root -ine $Given) { throw "RepoRoot '$RepoRoot' is not a repo root (top level is '$Root'); pass the root, not a subdir" }
 
-$Base = (& git rev-parse HEAD 2>$null).Trim()
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Base)) { throw "cannot resolve HEAD (git rev-parse HEAD failed)" }
+& git -C $Root fetch origin 2>$null
+if ($LASTEXITCODE -ne 0) { throw "git fetch origin failed in '$Root'" }
+$Base = (& git -C $Root rev-parse origin/main 2>$null)
+if ($LASTEXITCODE -ne 0) { throw "cannot resolve origin/main in '$Root'" }
+$Base = $Base.Trim()
+if ($Base -notmatch '^[0-9a-f]{40}$') { throw "unreadable origin/main tip: '$Base'" }
 
 $Branch = "goal/$Slug"
 $GoalDirRel = ".opencode/goal-loop/$Slug"
@@ -40,7 +51,7 @@ $AttachRel = "$GoalDirRel/attachments"
 $ManifestRel = "$GoalDirRel/reqs-manifest.md"
 $Date = (Get-Date -Format 'yyyy-MM-dd')
 
-$Porc = (& git status --porcelain -uall)
+$Porc = (& git -C $Root status --porcelain -uall)
 if ($LASTEXITCODE -ne 0) { throw "git status failed" }
 $Bad = @()
 foreach ($l in $Porc) {
@@ -51,21 +62,21 @@ if ($Bad.Count -gt 0) {
   throw ("dirty tree (only untracked files under $GoalDirRel/ are tolerated):`n" + ($Bad -join "`n"))
 }
 
-& git rev-parse --verify --quiet $Branch 2>$null | Out-Null
+& git -C $Root rev-parse --verify --quiet $Branch 2>$null | Out-Null
 if ($LASTEXITCODE -eq 0) { throw "branch $Branch already exists (init is one-shot; refusing second run)" }
-$RemoteHead = (& git ls-remote --heads origin $Branch 2>$null)
+$RemoteHead = (& git -C $Root ls-remote --heads origin $Branch 2>$null)
 if ($LASTEXITCODE -ne 0) { throw "git ls-remote origin failed (cannot check remote branch $Branch)" }
 if (-not [string]::IsNullOrWhiteSpace($RemoteHead)) { throw "branch $Branch already exists on origin (init is one-shot; refusing second run)" }
-if (Test-Path $ManifestRel -PathType Leaf) { throw "manifest $ManifestRel already exists (init is one-shot; refusing second run)" }
+if (Test-Path (Join-Path $Root $ManifestRel) -PathType Leaf) { throw "manifest $ManifestRel already exists (init is one-shot; refusing second run)" }
 
-& cmd /c "git checkout -b $Branch >nul 2>&1"
+& cmd /c "git -C ""$Root"" checkout -b $Branch >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "git checkout -b $Branch failed" }
 
 foreach ($D in @($GoalDirRel, $PromptsRel, $AttachRel)) {
-  New-Item -ItemType Directory -Force $D | Out-Null
+  New-Item -ItemType Directory -Force (Join-Path $Root $D) | Out-Null
 }
 
-$Files = @(Get-ChildItem $AttachRel -File -ErrorAction SilentlyContinue | Sort-Object Name)
+$Files = @(Get-ChildItem (Join-Path $Root $AttachRel) -File -ErrorAction SilentlyContinue | Sort-Object Name)
 $AttachLines = @()
 foreach ($F in $Files) {
   $H = (Get-FileHash -Path $F.FullName -Algorithm SHA256).Hash.ToLower()
@@ -90,11 +101,11 @@ $Manifest = @(
 )
 [IO.File]::WriteAllLines((Join-Path $Root $ManifestRel), $Manifest, [Text.Encoding]::ASCII)
 
-& cmd /c "git add $GoalDirRel >nul 2>&1"
+& cmd /c "git -C ""$Root"" add $GoalDirRel >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "git add $GoalDirRel failed" }
-& cmd /c "git commit -m ""goal($Slug): init branch + manifest skeleton"" >nul 2>&1"
+& cmd /c "git -C ""$Root"" commit -m ""goal($Slug): init branch + manifest skeleton"" >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "git commit failed" }
-& cmd /c "git push -u origin $Branch >nul 2>&1"
+& cmd /c "git -C ""$Root"" push -u origin $Branch >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "git push -u origin $Branch failed" }
 
 Write-Output "MACHINE-BEGIN"
