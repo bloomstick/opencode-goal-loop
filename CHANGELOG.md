@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+- `goal-loop`: docs efficiency bundle (EF1 REQ-01, 2026-10-15): skill
+  diet moves crash-history narrative, worked examples, and repeated
+  rationale to a trailing non-normative Appendix (secs. 0-8 keep numbers
+  and meaning; normative core reads end-to-end without it; core 594 ->
+  543 lines). Scoped reads: each prompt Preamble names the EXACT skill
+  sections and files the worker must read (sec. 2 step 4 + sec. 3), and
+  the worker reads nothing more without recording why. Prompt template
+  is deltas-only: the invariant boilerplate (heartbeat shape, landing
+  report-block shape, never-background, no-`task` tool, Windows notes,
+  proof norms, never-yield) lives once in `agents/goal-worker.md`, so a
+  worker with ONLY the prompt + agent file has everything. Windows notes
+  (no `sed`/`head`/`grep`/`wc`/`tail`; use `Select-String`,
+  `Select-Object -First N`, `Get-Content -Tail`; quote `$env:TEMP`,
+  never `/tmp`) and proof norms (trimmed outputs plus hashes over full
+  dumps, quoted; full scrollback is not evidence) live in the agent
+  file and in sec. 3 Acceptance + sec. 6. Bounded fan-out: file-disjoint
+  REQs MAY dispatch in parallel, at most 3 concurrent FOREGROUND runs in
+  one shell call that waits (never background persistence; server-held
+  background children restarted the server 3 times on 2026-10-12, see
+  Appendix), same-file edits stay sequential, per-worker branches and
+  step 5 budgets hold under fan-out. No autonomy added; REQ-02 owns
+  benchmarks and model routing.
+
 - `goal-supervisor`: re-fire carries manifest Attachments (correction,
   2026-10-15): the AF1 entry below wrongly said no supervisor change
   was needed - but the re-fired ORCHESTRATOR starts blind, so the
