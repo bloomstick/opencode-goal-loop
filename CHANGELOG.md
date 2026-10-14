@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- `goal-loop`: tiny-task fast path (user order 2026-10-14): the
+  orchestrator MAY execute a requirement inline with no worker iff all
+  tiny caps hold (at most 2 allow-listed files, ~30 added lines, no
+  cross-file hunt, inline verification under ~10 min, nothing touching
+  live machine state), with the same bar (manifest `inline:` Runs
+  line, commit + push, verified proof, SLOC); past ~15 min or past any
+  cap it MUST dispatch a worker instead. Sec. 0 + agent file point at
+  sec. 2 step 4; NEVER list and budgets unchanged.
+
 - `goal-sup`: PATH shim + installer PATH ensure (REQ-01, 2026-10-14):
   new `scripts/goal-supervisor/goal-sup.cmd` forwards all args to the
   global `Get-GoalSupervisors.ps1`; the installer appends the global

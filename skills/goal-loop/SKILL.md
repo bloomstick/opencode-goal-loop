@@ -31,7 +31,10 @@ work runs as foreground `opencode run` processes, never as subagents.
 - NEVER write plugin state with locks/leases/claims (the old
   `.opencode/goals/state.json.lock*` system). Goal state is one plain
   `reqs-manifest.md` per goal, written atomically by the orchestrator.
-- Orchestrator never does worker work when delegating. Workers never touch
+- Orchestrator never does worker work when delegating, except the
+  tiny-task fast path (sec. 2 step 4: inline ONLY when all tiny caps
+  hold, same acceptance bar, escalate to a worker the moment they
+  break). Workers never touch
   seams outside their scope. Workers: branch only, never push `main` (only
   the orchestrator pushes `main`, in §7 LAND).
 
@@ -118,6 +121,21 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    `prompts/` (see sec. 5), record the run in the manifest, commit AND
    push the goal branch, then run it foreground and collect
    the report block.
+   Tiny-task fast path (user order 2026-10-14: save tokens/time on
+   trivial actions): the orchestrator MAY execute a requirement inline
+   with NO worker iff ALL hold: touches at most 2 allow-listed files,
+   expected diff at most ~30 added lines, no cross-file consistency
+   hunt (more than ~3 places to reconcile means dispatch), verification
+   runnable inline in under ~10 min foreground with quoted outputs, and
+   nothing touching live machine state (no scheduler/registry/PATH/
+   installs - those always dispatch). Inline work keeps the same bar:
+   manifest `inline:` Runs line, commit AND push the goal branch,
+   every acceptance item verified with proof, SLOC reported.
+   Escalation: past ~15 min effort or past any cap, STOP inline and
+   dispatch a worker with the saved prompt (no sunk-cost sprawl); a
+   failed inline attempt dispatches the worker as the initial run,
+   noted in Runs. Never inline anything the NEVER list forbids,
+   multi-file refactors, live experiments, or landing/merging itself.
 5. **Verify-after-every-run (bounded driver).** After EVERY foreground
    run, before any integrate, classify the outcome first:
    - TRANSIENT failure means the dispatch itself died before a
