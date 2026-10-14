@@ -6,5 +6,7 @@ Base: 6113d2872482dc68706f4298eed5130e73e1539e | Date: 2026-10-14 | Slug: goal-a
 - REQ-01: no deps
 - REQ-02: after REQ-01 (uses Register -WorkingDirectory; must not modify scripts/)
 ## Runs
+### REQ-01
+- dispatch: 2026-10-14 branch feat/goal-armstart-req01 prompt `prompts/REQ-01.GS1.md` order "Implement REQ-01 arm-at-start rule + Register working directory per prompt file" re-fires: 0/3 retries: 0/3
 ## Log
 - 2026-10-14 goal opened; user ordered live-fire e2e; containment: Temp fixture repo + local bare origin, zero product impact
