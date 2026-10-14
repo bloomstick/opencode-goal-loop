@@ -4,8 +4,9 @@
 .DESCRIPTION
     Clones bloomstick/opencode-goal-loop (or pulls if present), then copies
     commands/*.md -> global commands, agents/*.md -> global agents,
-    skills/* -> global skills. Re-run to update. No symlinks, no plugins,
-    no background state. Restart OpenCode after install/update.
+    skills/* -> global skills, plus standing-orders.md -> global config
+    (first install only, never overwrites). Re-run to update. No symlinks,
+    no plugins, no background state. Restart OpenCode after install/update.
 .PARAMETER RepoUrl
     Source repo URL. Default: https://github.com/bloomstick/opencode-goal-loop.git
 .PARAMETER SourceDir
@@ -44,6 +45,17 @@ foreach ($S in (Get-ChildItem (Join-Path $SourceDir "skills") -Directory)) {
   $Dst = (Join-Path $SkillDir $S.Name)
   New-Item -ItemType Directory -Force $Dst | Out-Null
   Copy-Item (Join-Path $S.FullName "*") $Dst -Recurse -Force
+}
+
+$OrdersSrc = (Join-Path $SourceDir "standing-orders.md")
+$OrdersDst = (Join-Path $env:USERPROFILE ".config/opencode/standing-orders.md")
+if (Test-Path $OrdersSrc -PathType Leaf) {
+  if (-not (Test-Path $OrdersDst -PathType Leaf)) {
+    Copy-Item $OrdersSrc $OrdersDst
+    Write-Output ("ORDERS: installed template -> {0}" -f $OrdersDst)
+  } else {
+    Write-Output ("ORDERS: kept existing user copy at {0}" -f $OrdersDst)
+  }
 }
 
 Write-Output "DONE: goal-loop installed globally. Restart OpenCode, then run /goal <task>."
