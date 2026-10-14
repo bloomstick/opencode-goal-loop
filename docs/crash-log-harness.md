@@ -128,6 +128,28 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   stands, supervisor never touches server internals, and a crash in
   the OpenCode binary is upstream-only (rollback per sec. 4).
 
+### Status command (Get-GoalSupervisors)
+
+- One command answers "are my supervisors running":
+  `powershell -NoProfile -File ~/.config/opencode/goal-supervisor/Get-GoalSupervisors.ps1`
+  (repo copy `scripts/goal-supervisor/`; the installer deploy block
+  copies `scripts/goal-supervisor/*`, so it ships globally with zero
+  installer changes). Optional `-Tail <n>` (default 3 log lines per
+  goal) and `-Slug <slug>` (show only that goal).
+- Per goal it prints: task State / LastRunTime / LastTaskResult /
+  NextRunTime (via Get-ScheduledTaskInfo) + box end (trigger EndBoundary
+  when present); manifest REQ counts by status; supervisor-state.json
+  fields (attempts / lastAttemptUtc / lastCheckUtc); the last `-Tail`
+  supervisor.log lines under an `output:` label.
+- Verdicts (exactly one per goal, first match wins): STALE (RepoRoot or
+  goal dir gone) / RUNNING (supervisor.log fresh within 3x the task
+  tick) / IDLE-DISABLED (task Disabled, log not fresh) / FAILING
+  (LastTaskResult non-zero) / QUIET (log staler than 3x tick: box
+  expiry or sleeping machine). No tasks at all prints
+  `no supervisors registered` and exits 0.
+- Reads only: task Arguments (-RepoRoot / -Slug / -IntervalMinutes),
+  manifest, state file, log. It changes nothing.
+
 ### Collector behavior (REQ-02 boot-gap crash collector)
 
 - `lastCheckUtc` in `supervisor-state.json` is updated on EVERY run,
