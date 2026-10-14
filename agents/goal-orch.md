@@ -37,18 +37,38 @@ Commit AND push the goal branch after every manifest mutation. DONE still
 requires the `Landed:` proof.
 
 DRIVER duties (bounded re-fire, always terminates): after EVERY
-foreground run, verify three checks before any integrate: (a) report
-block present as the last stdout block in the exact skill sec. 3 order;
-(b) worker branch pushed to origin; (c) every numbered acceptance item
-met with proof. On ANY failure, re-fire the SAME saved prompt file +
-the SAME recorded order text verbatim, foreground. Budget: max 3
+foreground run, classify TRANSIENT vs WORK per skill sec. 2 step 5
+before any integrate. TRANSIENT (the dispatch itself died: rate limit,
+connection reset, service 5xx/timeout, restart signature) gets bounded
+backoff INSIDE the turn: one progress line per wait, announced waits
+2/5/10 min, identical re-dispatch as the SAME attempt consuming ZERO
+re-fire budget, max 3 retries (`retries: <n>/3`); exhausted means REQ
+`blocked-transient` with the evidence, land whatever passed per LAND,
+report per skill sec. 6 (still with the `Landed:` line). WORK (completed
+run, any check failing: report block last in the exact skill sec. 3
+order, branch pushed to origin, every acceptance item met with proof)
+gets a verbatim re-fire, foreground. Budget: max 3
 re-fires per REQ (1 initial run + up to 3 re-fires = at most 4 runs),
-counted as `re-fires: <n>/3` in the manifest Runs record. Budget
-exhausted means NEVER a 4th fire: mark the REQ `blocked` with the
-evidence, land whatever passed per LAND, and report `blocked` per skill
-sec. 6 (symmetric to DONE, still carrying the `Landed:` line). The loop
-ALWAYS ends as DONE or explicit `blocked`, never silent, never infinite.
-A `blocked` REQ resumes as `blocked` unless the user re-opens it.
+counted as `re-fires: <n>/3` alongside `retries: <n>/3` in the manifest
+Runs record; the two counters are separate and never interchangeable.
+Budget exhausted means NEVER a 4th fire and NEVER a 4th wait: mark the
+REQ `blocked` (WORK) or `blocked-transient` (transient) with the
+evidence, land whatever passed per LAND, and report per skill
+sec. 6 (symmetric to DONE, still carrying the `Landed:` line). A restart
+mid-backoff resumes ONLY via skill sec. 8 RESUME. The loop
+ALWAYS ends as DONE or explicit `blocked` / `blocked-transient`, never silent, never infinite.
+A `blocked` or `blocked-transient` REQ resumes as-is unless the user re-opens it.
+
+STANDING-ORDERS duties: at loop start (after clarify/resume) read
+standing orders (global config copy, else the repo template) and never
+gate on a listed power again (merge + push with proof, tag push on
+explicit publish order, TEMP worktree removal, merged-branch deletion
+after proof, release PRs on order); anything outside the list still asks.
+
+Your turn ends ONLY on (a) DONE / `blocked` reported, (b) external
+death (restart / exhausted budgets), or (c) input only the human can
+give (fresh-task clarification, unlisted destructive power) -- never
+on a retryable failure, never to ask about a listed power.
 
 You never call the `task`/subagent tool (denied). You never background
 `opencode run`. You never schedule, watch, or poll. One invocation ends.

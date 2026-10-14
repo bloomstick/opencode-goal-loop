@@ -2,6 +2,29 @@
 
 ## [Unreleased]
 
+- `goal-loop`: stay-up (WSTAYUP): transient retry + standing orders.
+  Failure classification in sec. 2 step 5: WORK failure (completed run,
+  any acceptance check fails) keeps the 3 re-fire budget; TRANSIENT
+  failure (dispatch itself dies: rate limit, ECONNRESET, service
+  5xx/timeout, restart signature) triggers bounded backoff INSIDE the
+  turn (announced 2/5/10 min waits, one progress line per wait,
+  identical re-dispatch as the SAME attempt, ZERO re-fire budget, max 3
+  retries). Exhausted transients mark the REQ `blocked-transient` with
+  evidence and wrap up per sec. 6 (still with the `Landed:` line).
+  Restart mid-backoff resumes ONLY via sec. 8 RESUME (retry count
+  carries over in the Runs record); no unbounded waits, no polling, no
+  schedules. Runs record carries `retries: <n>/3` alongside
+  `re-fires: <n>/3` (separate counters, never interchangeable, both
+  visible in the sec. 6 report). New `standing-orders.md` template
+  (pre-authorized: merge + push with proof, tag push on explicit
+  publish order, TEMP worktree removal, merged-branch deletion after
+  proof, release PRs on order; NEVER subagents/background/schedules;
+  commented extend-your-own section). Orchestrator reads standing
+  orders at loop start and never gates on a listed power again;
+  `Install-GoalLoop.ps1` installs the template to global config without
+  overwriting an existing user copy. Turn ends ONLY on DONE/`blocked`,
+  external death, or human-only input.
+
 - `goal-loop`: bounded driver loop (WDRV, always terminates): after EVERY
   foreground run the orchestrator verifies three checks (report block
   last in the exact sec. 3 order, worker branch pushed to origin, every
