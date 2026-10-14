@@ -137,6 +137,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    dispatches the worker as the initial run, noted in Runs. Never inline
    anything the NEVER list forbids, multi-file refactors, live
    experiments, or landing/merging itself.
+   Model routing (REQ-02 benchmark 2026-10-15, trivial probe count=4 lines=3,7,10,12): control opencode/muse-spark-1.3-contributor-free 13s PASS with report block and no auth error; opencode/nemotron-3.5-lightning-free 17s PASS with report block and no auth error; opencode/mimo-v2.6-flash-free 23s PASS with report block and no auth error. Verdict: no challenger beats the control, so routing stays incumbent for all classes with an incumbent-only fallback chain; budgets, branches, and caps unchanged.
 5. **Verify-after-every-run (bounded driver).** After EVERY foreground
    run, before any integrate, classify the outcome first:
    - TRANSIENT failure means the dispatch itself died before a
