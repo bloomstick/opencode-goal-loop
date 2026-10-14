@@ -100,7 +100,8 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
 
 - Scripts: `scripts/goal-supervisor/Invoke-GoalSupervisor.ps1`
   (detect + bounded re-fire + own logging + self-disable) and
-  `scripts/goal-supervisor/Register-GoalSupervisor.ps1` (registers the
+  `Register-GoalSupervisor.ps1` (global copy `~/.config/opencode/goal-supervisor/`, else repo
+  `scripts/goal-supervisor/`; registers the
   task DISABLED by default, 1 min interval, 2 h expiry, 1 h execution
   cap, IgnoreNew so runs never pile up; worst-case stop-to-refire ~4 min).
 - Stall rule: actionable REQs (pending/dispatched only) + no
@@ -121,7 +122,8 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   any terminal wrap-up (DONE / `blocked` / `blocked-transient`) even if
   the box has not expired. Both are recorded in the manifest Runs/Log
   and in the report (`Armed:` / `Disarmed:` lines per skill sec. 6).
-- Arm-at-start: same Register call MAY arm right after the manifest push, with `-WorkingDirectory` defaulting to the repo root (idempotent).
+- Arm-at-start: same Register call (global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`)
+  MAY arm right after the manifest push, with `-WorkingDirectory` defaulting to the repo root (idempotent).
 - Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
   stands, supervisor never touches server internals, and a crash in
   the OpenCode binary is upstream-only (rollback per sec. 4).

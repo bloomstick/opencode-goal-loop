@@ -40,7 +40,8 @@ after the manifest is written + pushed, or at a wrap-up that leaves
 actionable non-blocked non-awaiting REQs in flight, the orchestrator
 MAY register + enable the EXTERNAL supervisor only (Windows Scheduled Task outside the OpenCode server, per
 docs/crash-log-harness.md sec. 6, via
-scripts/goal-supervisor/Register-GoalSupervisor.ps1 with `-Enable` and
+Register-GoalSupervisor.ps1 (global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`)
+with `-Enable` and
 a stated time box), and MUST unregister it at any terminal wrap-up
 (DONE / `blocked` / `blocked-transient`). Every other sec. 0 ban
 stands: no subagents, no server-held background, no
@@ -102,8 +103,8 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    sec. 8 RESUME. Commit AND push the goal branch after every manifest
    mutation (see sec. 5 rules). Arm-at-start (same GOALAUTO sec. 0
    exception): after the manifest is written + pushed, the orchestrator
-   MAY arm the EXTERNAL supervisor (same Register-GoalSupervisor.ps1
-   with `-Enable` and a stated time box, per harness sec. 6; record
+   MAY arm the EXTERNAL supervisor (same Register-GoalSupervisor.ps1: global copy `~/.config/opencode/goal-supervisor/`,
+   else repo `scripts/goal-supervisor/`, with `-Enable` and a stated time box, per harness sec. 6; record
    task name + box in Runs/Log + report). Arming is idempotent
    (Register unregisters the name first). Never arm while any REQ is
    `awaiting-input`; disarm-at-terminal per step 9 is unchanged.
@@ -189,12 +190,14 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    for the next task.
    Arm-at-start (same GOALAUTO sec. 0 exception): after the manifest is
    written + pushed, the orchestrator MAY arm the EXTERNAL supervisor
-   (same Register call, stated box, record task + box in Runs/Log);
+   (same Register call: global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`,
+   stated box, record task + box in Runs/Log);
    idempotent (Register unregisters the name first).
    Arm (non-terminal wrap-up only, GOALAUTO sec. 0 exception): when the
    turn parks with actionable non-blocked non-awaiting REQs still in
    flight, the orchestrator MAY register + enable the EXTERNAL
-   supervisor (Register-GoalSupervisor.ps1 with `-Enable` and a stated
+   supervisor (Register-GoalSupervisor.ps1: global copy `~/.config/opencode/goal-supervisor/`, else repo
+   `scripts/goal-supervisor/`, with `-Enable` and a stated
    time box, per harness sec. 6), and records task name + box in
    Runs/Log + report. Disarm (terminal wrap-up): at DONE / `blocked` /
    `blocked-transient`, the orchestrator MUST unregister the supervisor

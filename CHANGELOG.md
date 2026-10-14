@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- `Install-GoalLoop.ps1`: deploy supervisor scripts globally (REQ-01,
+  2026-10-14): installer copies `scripts/goal-supervisor/*` to the
+  global copy `~/.config/opencode/goal-supervisor/` after the skills
+  copy (same `-Force` style, one SUPERVISOR line, always overwrite:
+  scripts are product code, no keep-existing logic); skill sec. 0
+  exception + sec. 2 arm rules and harness sec. 6 now resolve the
+  Register script via the global copy, else repo
+  `scripts/goal-supervisor/` (standing-orders pattern).
+
 - `goal-supervisor`: tighten cadence to 1-min ticks + 3-min stall
   (REQ-01, 2026-10-14): Register `-IntervalMinutes` default 5 -> 1
   (2 h box, Disabled default, exec cap, IgnoreNew unchanged);
