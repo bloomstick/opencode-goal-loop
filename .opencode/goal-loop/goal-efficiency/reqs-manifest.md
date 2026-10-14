@@ -6,5 +6,7 @@ Base: 98b0012d178d4d7d66d52fb734da88d6609e799a | Date: 2026-10-15 | Slug: goal-e
 - REQ-01: no deps
 - REQ-02: after REQ-01 (extends the same skill sections)
 ## Runs
+### REQ-01
+- dispatch: 2026-10-15 branch feat/goal-effic-req01 prompt `prompts/REQ-01.EF1.md` order "Implement REQ-01 docs efficiency bundle per prompt file" re-fires: 0/3 retries: 0/3
 ## Log
 - 2026-10-15 goal opened; user ordered all six optimizations; models trio (mimo-flash + nemotron-lightning + spark control), fan-out cap 3; free/auth status proven by probe, not assumed
