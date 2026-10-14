@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+- `goal-init` + orch-side attachments only (REQ-02 GI2, 2026-10-15, user
+  order): WORKERS MUST NOT RECEIVE ATTACHMENTS. New
+  `scripts/goal-init.ps1` (Step 0: slug, clean-tree guard tolerating only
+  the pending goal dir, branch `goal/<slug>`, goal dir + prompts/ +
+  attachments/, present files hashed into the manifest skeleton, commit +
+  push, MACHINE block); the orchestrator saves each attached file
+  VERBATIM to `<goaldir>/attachments/<original-name>` before init and the
+  manifest holds SAVED paths + sha256 (sessions keep BASENAMES only, so
+  original paths are unrecoverable); `commands/goal.md` gains Step 0; a
+  promised-but-missing attachment parks the REQ as awaiting-input instead
+  of running blind. STRIPPED per user order (AF1 worker-direction gone):
+  worker dispatch attachment flags, the Runs attachment field, and
+  worker-side attachment scope; the supervisor re-fire keeps its manifest
+  Attachments `-f` set to the ORCHESTRATOR, unchanged.
+
 - `goal-loop`: arm-at-start + wrap-up arm now MANDATORY (user order
   2026-10-15): the GOALAUTO sec. 0 exception flips MAY to MUST whenever
   actionable non-blocked non-awaiting REQs are in flight (stated box,
