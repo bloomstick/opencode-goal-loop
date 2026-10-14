@@ -79,3 +79,32 @@ For ANY suspected crash/restart during an experiment, record:
 
 No processes started, none running from this work. Two files changed:
 this doc + CHANGELOG entry. Branch only, no tags, no workflow runs.
+
+## 6. External supervisor (GOALAUTO experiment, feat/goal-auto)
+
+Design constraint, read first: a server-held watcher cannot work (dies
+in the restart it should fix; server-held background children are the
+2026-10-12 crash vector). The supervisor therefore lives OUTSIDE
+OpenCode as a Windows Scheduled Task and only reads git + manifest.
+
+- Scripts: `scripts/goal-supervisor/Invoke-GoalSupervisor.ps1`
+  (detect + bounded re-fire + own logging + self-disable) and
+  `scripts/goal-supervisor/Register-GoalSupervisor.ps1` (registers the
+  task DISABLED by default, 5 min interval, 2 h expiry, 1 h execution
+  cap, IgnoreNew so runs never pile up).
+- Stall rule: actionable REQs (pending/dispatched only) + no
+  manifest/branch activity for 15 min + 10 min cooldown + max 3
+  attempts; anything else exits NOOP (quiet is the steady state).
+- Per-goal runtime files (next to the manifest, feed sec. 3 above):
+  `supervisor.log` (every decision line) and `supervisor-state.json`
+  (attempts + last attempt; cap reached self-disables the task).
+- Proofs on landing (synthetic fixture, dry-run): STALL detected with
+  exact re-fire command, COOLDOWN respected, missing manifest NOOP;
+  task registration verified Disabled then removed (zero residue).
+- Enable ONLY against a live goal, inside a stated time box:
+  `Enable-ScheduledTask -TaskName goal-supervisor-<slug>`
+  Stop/remove any time:
+  `Unregister-ScheduledTask -TaskName goal-supervisor-<slug> -Confirm:$false`
+- Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
+  stands, supervisor never touches server internals, and a crash in
+  the OpenCode binary is upstream-only (rollback per sec. 4).

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- `goal-loop`: external supervisor experiment (GOALAUTO, ban stands):
+  `scripts/goal-supervisor/` holds an out-of-server Windows Scheduled
+  Task watchdog (manifest + git stall detection, bounded re-fire via
+  foreground `opencode run` as a task child, cooldown + attempt caps +
+  self-disable, per-goal `supervisor.log` wired into the harness
+  incident protocol). Registers DISABLED with 5 min / 2 h box; proofs:
+  dry-run STALL/COOLDOWN/NOOP + registration round-trip with zero
+  residue. No skill/agent/installer edits.
+
 - `goal-loop`: crash-log harness (`docs/crash-log-harness.md`,
   observation only): debuggable environment for any future automation
   experiment without lifting sec. 0. Verified Windows log locations
