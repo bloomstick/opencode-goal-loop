@@ -29,7 +29,7 @@ param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
   [Parameter(Mandatory=$true)][string]$Slug,
   [string]$TaskName = '',
-  [int]$StallMinutes = 15,
+  [int]$StallMinutes = 3,
   [int]$CooldownMinutes = 10,
   [int]$MaxAttempts = 3,
   [int]$IntervalMinutes = 5,

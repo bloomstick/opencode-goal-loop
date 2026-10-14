@@ -9,7 +9,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$RepoRoot,
   [Parameter(Mandatory=$true)][string]$Slug,
-  [int]$IntervalMinutes = 5,
+  [int]$IntervalMinutes = 1,
   [int]$BoxHours = 2,
   [switch]$Enable,
   [string]$WorkingDirectory = ""
