@@ -142,9 +142,30 @@ if ($attempts -ge $MaxAttempts) {
 
 $reqs = ($actionable -join ',')
 $order = "continue goal $Slug ($RepoRoot)"
+# Attachments (goal-attach-orch): the FRESH orchestrator session starts
+# blind, so the re-fire carries the manifest Attachments `-f` set with
+# it. Parse ORIGINAL absolute paths from the ## Attachments block in
+# manifest order; missing files are skipped with an evidence line (the
+# orchestrator reconciles per manifest on arrival).
+$attachPaths = @()
+$inAttach = $false
+foreach ($l in (Get-Content $manifest)) {
+  if ($l -match '^## Attachments') { $inAttach = $true; continue }
+  if ($inAttach) {
+    if ($l -match '^## ') { break }
+    if ($l -match '^-\s+([A-Za-z]:\\.+)') {
+      $ap = $Matches[1].Trim()
+      if (Test-Path $ap) { $attachPaths += $ap }
+      else { SLog ("ATTACH-MISSING slug=" + $Slug + " path=" + $ap + " (skipped with evidence; orchestrator reconciles per manifest)") }
+    }
+  }
+}
+$refireArgs = @('run', '--auto', '--agent', $Agent)
+foreach ($ap in $attachPaths) { $refireArgs += '-f'; $refireArgs += $ap }
+$refireArgs += $order
 SLog ("STALL slug=" + $Slug + " reqs=" + $reqs + " idleMin=" + [math]::Round($idleMin,1) + " attempt=" + ($attempts + 1) + "/" + $MaxAttempts)
 
-if ($DryRun) { SLog ("DRYRUN would run: opencode run --auto --agent " + $Agent + " """ + $order + """"); TouchCheck $state $now; SaveState $state; exit 0 }
+if ($DryRun) { SLog ("DRYRUN would run: opencode " + ($refireArgs -join ' ')); TouchCheck $state $now; SaveState $state; exit 0 }
 
 # REQ-02b SERVER-DOWN condition: the refire child failed to launch (catch
 # path, code stays -1) OR exited with a null code (treated as -1) OR exited
@@ -155,7 +176,7 @@ if ($DryRun) { SLog ("DRYRUN would run: opencode run --auto --agent " + $Agent +
 $code = -1
 $launchFailed = $false
 try {
-  & opencode run --auto --agent $Agent $order
+  & opencode @refireArgs
   $code = $LASTEXITCODE
 } catch { $code = -1; $launchFailed = $true }
 $isDown = $false
