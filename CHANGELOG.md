@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+- `goal-supervisor`: status command (REQ-01, 2026-10-14):
+  `scripts/goal-supervisor/Get-GoalSupervisors.ps1` answers "are my
+  supervisors running": one block per `goal-supervisor-*` task (State /
+  LastRunTime / LastTaskResult / NextRunTime + box EndBoundary,
+  manifest REQ counts, state fields, last `-Tail` log lines) with one
+  verdict per goal (STALE / RUNNING / IDLE-DISABLED / FAILING / QUIET).
+  Read-only; ships globally via the existing installer deploy block
+  (`scripts/goal-supervisor/*`, zero installer changes). Run form
+  `powershell -NoProfile -File
+  ~/.config/opencode/goal-supervisor/Get-GoalSupervisors.ps1`; proofs:
+  two DISABLED probes via the product Register script (fresh-log goal
+  RUNNING with done:1, removed-RepoRoot goal STALE), `-Slug` filter,
+  empty machine prints `no supervisors registered`; probes + fixture
+  removed with zero residue. See `docs/crash-log-harness.md` sec. 6.
+
 - `Install-GoalLoop.ps1`: deploy supervisor scripts globally (REQ-01,
   2026-10-14): installer copies `scripts/goal-supervisor/*` to the
   global copy `~/.config/opencode/goal-supervisor/` after the skills
