@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- `goal-loop`: arm-at-start + wrap-up arm now MANDATORY (user order
+  2026-10-15): the GOALAUTO sec. 0 exception flips MAY to MUST whenever
+  actionable non-blocked non-awaiting REQs are in flight (stated box,
+  disarm at terminal, never on awaiting-input, user "no supervisor"
+  opts out, failed arm recorded but never a gate). Live proof:
+  `goal-supervisor-char-adapt` armed 8 h box, ticking 1-min NOOPs.
+
 - `goal-loop`: docs efficiency bundle (EF1 REQ-01, 2026-10-15): skill
   diet moves crash-history narrative, worked examples, and repeated
   rationale to a trailing non-normative Appendix (secs. 0-8 keep numbers

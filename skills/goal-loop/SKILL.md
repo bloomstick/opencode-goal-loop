@@ -34,15 +34,20 @@ work runs as foreground `opencode run` processes, never as subagents.
   seams outside their scope. Workers: branch only, never push `main` (only
   the orchestrator pushes `main`, in §7 LAND).
 
-GOALAUTO exception (user order 2026-10-14, the ONLY sec. 0 exception):
+GOALAUTO exception (user order 2026-10-14, the ONLY sec. 0 exception,
+arming made MANDATORY by user order 2026-10-15):
 after the manifest is written + pushed, or at a wrap-up that leaves
 actionable non-blocked non-awaiting REQs in flight, the orchestrator
-MAY register + enable the EXTERNAL supervisor only (Windows Scheduled Task outside the OpenCode server, per
+MUST register + enable the EXTERNAL supervisor only (Windows Scheduled Task
+outside the OpenCode server, per
 docs/crash-log-harness.md sec. 6, via
 Register-GoalSupervisor.ps1 (global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`)
 with `-Enable` and
 a stated time box), and MUST unregister it at any terminal wrap-up
-(DONE / `blocked` / `blocked-transient`). Every other sec. 0 ban
+(DONE / `blocked` / `blocked-transient`). If arming fails, record the
+failure in Runs/Log + report and continue the goal anyway (arming is
+insurance, never a gate). The user saying "no supervisor" opts out.
+Every other sec. 0 ban
 stands: no subagents, no server-held background, no
 schedules-as-monitoring, no polling, no unbounded waits.
 
@@ -99,10 +104,13 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
    chat memory, is the acceptance record and the resumable state for
    sec. 8 RESUME. Commit AND push the goal branch after every manifest
-   mutation (see sec. 5 rules). Arm-at-start (GOALAUTO sec. 0 exception):
-   after the manifest is written + pushed, the orchestrator MAY arm the
-   EXTERNAL supervisor; record task name + box in Runs/Log + report (full
+   mutation (see sec. 5 rules). Arm-at-start (GOALAUTO sec. 0 exception,
+   MANDATORY since 2026-10-15 unless the user said no supervisor):
+   after the manifest is written + pushed, the orchestrator MUST arm the
+   EXTERNAL supervisor when actionable non-blocked non-awaiting REQs are
+   in flight; record task name + box in Runs/Log + report (full
    call, idempotency, and never-arm-on-`awaiting-input`: see step 9).
+   A failed arm is recorded, never a gate: continue the goal anyway.
 3. **DAG.** Map dependencies. No-dependency requirements may run parallel
    (bounded fan-out: see step 4); dependent ones run in order. Same-file
    edits always sequential.
@@ -210,13 +218,14 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    plus the pending human question. No
    `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
    for the next task.
-   Arm (GOALAUTO sec. 0 exception, non-terminal wrap-up only): when the
+   Arm (GOALAUTO sec. 0 exception, non-terminal wrap-up only,
+   MANDATORY since 2026-10-15 unless the user said no supervisor): when the
    turn parks with actionable non-blocked non-awaiting REQs in flight
    (including arm-at-start right after the manifest is written + pushed),
-   the orchestrator MAY register + enable the EXTERNAL supervisor via
+   the orchestrator MUST register + enable the EXTERNAL supervisor via
    Register-GoalSupervisor.ps1 with `-Enable` and a stated time box (per
    harness sec. 6; idempotent; record task name + box in Runs/Log +
-   report). Disarm (terminal wrap-up): at DONE / `blocked` /
+   report). A failed arm is recorded, never a gate. Disarm (terminal wrap-up): at DONE / `blocked` /
    `blocked-transient`, the orchestrator MUST unregister the supervisor
    if armed, and records + reports it. Never arm while any REQ is
    `awaiting-input`; nothing keeps running after a terminal wrap-up or a
