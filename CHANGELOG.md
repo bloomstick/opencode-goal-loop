@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- `goal-supervisor`: re-fire carries manifest Attachments (correction,
+  2026-10-15): the AF1 entry below wrongly said no supervisor change
+  was needed - but the re-fired ORCHESTRATOR starts blind, so the
+  supervisor now appends the manifest Attachments `-f` set to its
+  `opencode run` re-fire (shared arg builder feeds DryRun display and
+  the real call alike); missing files are skipped with an
+  `ATTACH-MISSING` evidence line while the `-f` set keeps the rest,
+  and the orchestrator reconciles per manifest on arrival. Skill sec. 4
+  + sec. 5 lines fixed to match.
+
 - `goal-loop`: attachment forward chain (REQ-01 AF1, 2026-10-15): the
   old dispatch (`-f <prompt-file>` only) dropped every user attachment;
   the orchestrator now records `/goal` user files as ORIGINAL absolute

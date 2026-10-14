@@ -314,8 +314,9 @@ record `files:` list carries the exact `-f` set (sec. 5); every re-fire
 reproduces it byte-identical with no edits, and a missing file at
 re-fire time is evidence per sec. 2 step 5, never silent. `-f` is
 repeatable per `opencode run --help` (`File(s) to attach to message`).
-The supervisor re-invokes the ORCHESTRATOR, which re-reads the manifest,
-so no supervisor change is needed.
+The supervisor re-invokes the ORCHESTRATOR with the manifest Attachments
+`-f` set appended, so the fresh session receives the original user
+files; the orchestrator re-reads the manifest for the rest.
 
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
 `opencode run` as a foreground process so the server never holds background
@@ -417,8 +418,10 @@ Rules:
   silent). Attached paths join the worker editable scope for that
   dispatch only, including outside-the-repo paths; the allowed-files list
   still governs everything else and branch-only still holds (workers never
-  push `main`). The supervisor re-invokes the ORCHESTRATOR, which re-reads
-  the manifest, so no supervisor change is needed.
+  push `main`). The supervisor re-invokes the ORCHESTRATOR with the
+  manifest Attachments `-f` set appended, so the fresh session receives
+  the original user files; the orchestrator re-reads the manifest for
+  the rest.
 
 ## 6. Report
 
