@@ -23,7 +23,17 @@
   background children restarted the server 3 times on 2026-10-12, see
   Appendix), same-file edits stay sequential, per-worker branches and
   step 5 budgets hold under fan-out. No autonomy added; REQ-02 owns
-  benchmarks and model routing.
+  benchmarks and model routing. REQ-02 (2026-10-15): one trivial probe
+  (count non-ASCII lines, known answer count=4 lines=3,7,10,12, top3
+  3,7,10) run foreground sequentially via opencode run --auto -m <model>
+  --agent goal-worker: control
+  opencode/muse-spark-1.3-contributor-free 13s PASS with report block and
+  no auth error; opencode/nemotron-3.5-lightning-free 17s PASS with report
+  block and no auth error; opencode/mimo-v2.6-flash-free 23s PASS with
+  report block and no auth error. Verdict: no challenger beats the control,
+  so routing stays incumbent for all classes with an incumbent-only fallback
+  chain; budgets, branches, and caps unchanged; rule vs budgets/caps
+  proofread consistent, no autonomy added.
 
 - `goal-supervisor`: re-fire carries manifest Attachments (correction,
   2026-10-15): the AF1 entry below wrongly said no supervisor change
