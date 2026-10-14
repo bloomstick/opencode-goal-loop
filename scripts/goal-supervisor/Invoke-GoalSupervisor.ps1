@@ -32,7 +32,7 @@ param(
   [int]$StallMinutes = 3,
   [int]$CooldownMinutes = 10,
   [int]$MaxAttempts = 3,
-  [int]$IntervalMinutes = 5,
+  [int]$IntervalMinutes = 1,
   [string]$Agent = 'goal-orch',
   [switch]$DryRun
 )
