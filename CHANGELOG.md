@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- `goal-loop`: backoff waits removed entirely (user order 2026-10-15):
+  TRANSIENT failures re-dispatch immediately, max 3 retries, zero waits
+  and zero sleeps; counters, budgets, `blocked-transient`, RESUME, and
+  the supervisor are unchanged. Also fixed a stale MAY-arm paragraph in
+  standing orders to the landed MUST rule.
+
 - `goal-init` + orch-side attachments only (REQ-02 GI2, 2026-10-15, user
   order): WORKERS MUST NOT RECEIVE ATTACHMENTS. New
   `scripts/goal-init.ps1` (Step 0: slug, clean-tree guard tolerating only

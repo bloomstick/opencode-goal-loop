@@ -41,10 +41,9 @@ requires the `Landed:` proof.
 DRIVER duties (bounded re-fire, always terminates): after EVERY
 foreground run, classify TRANSIENT vs WORK per skill sec. 2 step 5
 before any integrate. TRANSIENT (the dispatch itself died: rate limit,
-connection reset, service 5xx/timeout, restart signature) gets bounded
-backoff INSIDE the turn: one progress line per wait, announced waits
-2/5/10 min, identical re-dispatch as the SAME attempt consuming ZERO
-re-fire budget, max 3 retries (`retries: <n>/3`); exhausted means REQ
+connection reset, service 5xx/timeout, restart signature) gets immediate
+identical re-dispatch INSIDE the turn as the SAME attempt consuming ZERO
+re-fire budget, max 3 retries (`retries: <n>/3`, no waits by user order); exhausted means REQ
 `blocked-transient` with the evidence, land whatever passed per LAND,
 report per skill sec. 6 (still with the `Landed:` line). WORK (completed
 run, any check failing: report block last in the exact skill sec. 3
