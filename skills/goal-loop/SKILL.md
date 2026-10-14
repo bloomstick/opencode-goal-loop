@@ -62,9 +62,16 @@ or blocked on the next human turn; nothing runs unattended).
    `/goal`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
    and continue from the first non-done, non-blocked REQ (either
    `blocked` or `blocked-transient` counts as blocked). Only clarify a fresh goal
-   with no manifest. Do not code yet. Propose atomic requirements
-   (best guess, not open-ended questions). User confirms or picks
-   `recommend` for all. Standing orders: immediately after
+   with no manifest. Do not code yet. Clarification is ONE round, max 3
+   questions: propose atomic requirements (best guess, not open-ended
+   questions) and put `recommend: accept all` first. The user confirms
+   once. After that round, NEVER ask again mid-goal: decide everything
+   below destructive impact by best guess, record each decision in the
+   manifest Log, and drive to DONE/`blocked`. Mid-goal questions are
+   allowed ONLY for (a) input only the human can give that blocks all
+   forward motion, or (b) an unlisted destructive power. Question-drip
+   (returning for one more preference at a time) is a loop stall and is
+   banned with the same force as backgrounding. Standing orders: immediately after
    clarify/resume, read standing orders (global config copy deployed
    by `Install-GoalLoop.ps1`, falling back to the repo
    `standing-orders.md` template) and never gate on a listed power

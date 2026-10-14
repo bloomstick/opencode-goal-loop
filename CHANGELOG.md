@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- `goal-loop`: single-round clarification (max 3 questions, recommend
+  first), then best-guess + manifest-logged decisions to DONE; mid-goal
+  questions only for human-only blockers or unlisted destructive powers.
+  Question-drip banned as a loop stall.
+
 - `goal-loop`: stay-up (WSTAYUP): transient retry + standing orders.
   Failure classification in sec. 2 step 5: WORK failure (completed run,
   any acceptance check fails) keeps the 3 re-fire budget; TRANSIENT
