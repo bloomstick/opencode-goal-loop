@@ -73,7 +73,18 @@ For ANY suspected crash/restart during an experiment, record:
   outcome; (c) time box expires crash-free -> propose the next bounded
   step, still no standing autonomy.
 - NOTHING in this file authorizes standing orders beyond the skill:
-  `standing-orders.md` still cannot list anything sec. 0 forbids.
+  `standing-orders.md` still cannot list anything sec. 0 forbids,
+  except the GOALAUTO skill-sec-0 exception.
+- Arm/disarm protocol (GOALAUTO, skill sec. 0 exception, user order
+  2026-10-14): arm ONLY at a non-terminal wrap-up with actionable
+  non-blocked non-awaiting REQs in flight, via
+  Register-GoalSupervisor.ps1 with `-Enable` and a stated time box
+  (defaults: 5 min interval, 2 h expiry); record task name + box in the
+  manifest Runs/Log + report. Disarm at any terminal wrap-up (DONE /
+  `blocked` / `blocked-transient`) via Unregister-ScheduledTask even if
+  the box has not expired; record + report it. Never arm while any REQ
+  is `awaiting-input` (the supervisor parks as NOOP). Registration
+  alone (Disabled default) starts nothing.
 
 ## 5. Kill-switch statement (this change)
 
@@ -105,6 +116,11 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   `Enable-ScheduledTask -TaskName goal-supervisor-<slug>`
   Stop/remove any time:
   `Unregister-ScheduledTask -TaskName goal-supervisor-<slug> -Confirm:$false`
+- Arm means register + enable with `-Enable` + stated box at a
+  non-terminal wrap-up with work in flight; disarm means unregister at
+  any terminal wrap-up (DONE / `blocked` / `blocked-transient`) even if
+  the box has not expired. Both are recorded in the manifest Runs/Log
+  and in the report (`Armed:` / `Disarmed:` lines per skill sec. 6).
 - Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
   stands, supervisor never touches server internals, and a crash in
   the OpenCode binary is upstream-only (rollback per sec. 4).

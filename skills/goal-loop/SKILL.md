@@ -17,21 +17,34 @@ background children, plain-manifest state only.
 Free-tier constraint: the `task` tool (subagents) is unavailable. All child
 work runs as foreground `opencode run` processes, never as subagents.
 
-## 0. Hard rules (no exceptions)
+## 0. Hard rules (one bounded exception: GOALAUTO)
 
 - NEVER use the `subagent` task tool. It is unavailable on free tier and
   forbidden here. Deny it in agent frontmatter (`permission: task: deny`).
 - NEVER run `opencode run` in background (`shell` `background: true`,
   `Start-Job` holding it server-side, `&`, `nohup`). Foreground only.
 - NEVER add schedules, services, watchers, polling loops, idle hooks, or
-  background persistence. Attended loop only: one `/goal` invocation runs
-  to DONE, then stops. No timers survive the session.
+  background persistence, except the GOALAUTO external supervisor below.
+  Attended loop only: one `/goal` invocation runs
+  to DONE, then stops. No timers survive the session except a
+  time-boxed armed supervisor (see exception).
 - NEVER write plugin state with locks/leases/claims (the old
   `.opencode/goals/state.json.lock*` system). Goal state is one plain
   `reqs-manifest.md` per goal, written atomically by the orchestrator.
 - Orchestrator never does worker work when delegating. Workers never touch
   seams outside their scope. Workers: branch only, never push `main` (only
   the orchestrator pushes `main`, in §7 LAND).
+
+GOALAUTO exception (user order 2026-10-14, the ONLY sec. 0 exception):
+at a wrap-up that leaves actionable non-blocked non-awaiting REQs in
+flight, the orchestrator MAY register + enable the EXTERNAL supervisor
+only (Windows Scheduled Task outside the OpenCode server, per
+docs/crash-log-harness.md sec. 6, via
+scripts/goal-supervisor/Register-GoalSupervisor.ps1 with `-Enable` and
+a stated time box), and MUST unregister it at any terminal wrap-up
+(DONE / `blocked` / `blocked-transient`). Every other sec. 0 ban
+stands: no subagents, no server-held background, no
+schedules-as-monitoring, no polling, no unbounded waits.
 
 ## 1. When to use
 
@@ -115,7 +128,8 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    order text verbatim, counts as the SAME attempt, consumes ZERO
    re-fire budget). Max 3 transient retries per run with growing waits
    (2 min, then 5 min, then 10 min); waits are fixed sleeps announced up
-   front, never condition polling, never schedules, never unbounded.
+   front, never condition polling, never schedules except the GOALAUTO
+   external-supervisor arm per sec. 0, never unbounded.
    Record each as a `retry<N>:` line with `retries: <n>/3` in the Runs
    record (sec. 5), commit AND push the goal branch per wait cycle. When
    all 3 transient retries are exhausted, NEVER wait a 4th time: mark
@@ -125,7 +139,8 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    passed per sec. 7, report per sec. 6, still with the `Landed:` line).
    A server restart can still kill the turn itself mid-backoff: that
    path stays covered ONLY by sec. 8 RESUME (state is on the goal branch
-   + worker branches), never by new autonomy.
+   + worker branches), never by new autonomy except the GOALAUTO
+   external supervisor per sec. 0.
    On a WORK failure (completed run, any check failing), re-fire the SAME saved prompt file + the SAME
    recorded order text verbatim (byte-identical, no edits), foreground
    per sec. 4. Budget: max 3 re-fires per REQ (1 initial run + up to 3
@@ -165,8 +180,17 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    passed per sec. 7 (still with the `Landed:` line) and reports the REQ
    plus the pending human question. No
    `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
-   for the next task. Nothing keeps running after DONE, `blocked`,
-   `blocked-transient`, or a parked `awaiting-input` turn.
+   for the next task.
+   Arm (non-terminal wrap-up only, GOALAUTO sec. 0 exception): when the
+   turn parks with actionable non-blocked non-awaiting REQs still in
+   flight, the orchestrator MAY register + enable the EXTERNAL
+   supervisor (Register-GoalSupervisor.ps1 with `-Enable` and a stated
+   time box, per harness sec. 6), and records task name + box in
+   Runs/Log + report. Disarm (terminal wrap-up): at DONE / `blocked` /
+   `blocked-transient`, the orchestrator MUST unregister the supervisor
+   if armed, and records + reports it. Nothing keeps running after a
+   terminal wrap-up (disarm is part of it) or after a parked
+   `awaiting-input` turn (never armed).
 
 ## 3. Worker prompt file (eight parts, in order)
 
@@ -183,7 +207,9 @@ before dispatch:
 3. **Scope:** allowed files ONLY (new file or explicit list) + numbered
    requirements + verification path per requirement.
 4. **Forbidden:** branch-only, no main push, no other files, no new deps,
-   no schedules/services/watchers/polling, no other repos, no `task`
+   no schedules/services/watchers/polling (workers NEVER arm the
+   GOALAUTO supervisor; arm/disarm is orchestrator-only per sec. 0),
+   no other repos, no `task`
    tool (ask the orchestrator via the report instead). Runs FOREGROUND:
    never background itself, stop every child process at ship.
 5. **Heartbeat:** progress line per subtask boundary in session output
@@ -315,7 +341,10 @@ Rules:
 
 Per worker + integration: task-code, files, SLOC structural-vs-cheap
 split, commands + outputs, `Caveats: none` or explicit list (unverified
-areas, risks, follow-ups). Stdout MUST end with the §3 report block last.
+areas, risks, follow-ups). Where the GOALAUTO supervisor was armed or
+disarmed this turn, the report carries one line each:
+`Armed: goal-supervisor-<slug> box <N>h` and/or
+`Disarmed: goal-supervisor-<slug>`. Stdout MUST end with the sec. 3 report block last.
 
 After any resume (see sec. 8), the report opens with a resume summary
 line (before the per-worker detail):
@@ -409,7 +438,8 @@ A server restart kills the orchestrator session but the work survives:
 manifest + prompt files are committed and pushed on the goal branch, and
 worker commits are pushed on worker branches. RESUME rebuilds session
 state from disk + remote; it adds no schedules, services, watchers,
-polling loops, idle hooks, unattended retries, or background work.
+polling loops, idle hooks, unattended retries, or background work,
+except the GOALAUTO external-supervisor arm per sec. 0.
 In-turn transient retries stay per sec. 2 step 5 only; a restart that
 kills a turn mid-backoff resumes here, and only here, from the pushed
 Runs record (`retries: <m>/3` carries over like `re-fires: <n>/3`).
@@ -418,7 +448,8 @@ a human goal turn ("continue" or a re-run of `/goal`) when a manifest
 exists. One invocation still ends at DONE, `blocked`, or
 `blocked-transient`, or at the next
 human turn after a resume that still has work in flight;
-nothing keeps running after that (see sec. 0 hard rules).
+nothing keeps running after that except an armed GOALAUTO supervisor
+per sec. 0 (disarmed at any terminal wrap-up; see sec. 0 hard rules).
 
 On ANY goal turn with an existing manifest, the orchestrator MUST,
 before any new dispatch:
@@ -471,4 +502,5 @@ inside one invocation; RESUME never re-fires `done` and never silently
 re-opens `blocked` or `blocked-transient`, and never touches
 `awaiting-input` (only the human answer clears it per sec. 5).
 RESUME is the only restart
-path: it never adds autonomy beyond sec. 2 step 5.
+path: it never adds autonomy beyond sec. 2 step 5 and the GOALAUTO
+external-supervisor arm per sec. 0.

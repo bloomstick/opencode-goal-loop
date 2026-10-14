@@ -34,8 +34,15 @@ Standing orders cannot override skill sec. 0 hard rules, no exceptions:
   `blocked-transient`, then stops.
 - NEVER unbounded waits or condition polling. Transient retries stay
   bounded per sec. 2 step 5 (max 3, announced 2/5/10 min waits).
+- GOALAUTO exception only (skill sec. 0, user order 2026-10-14): the
+  orchestrator MAY arm the EXTERNAL supervisor at a non-terminal wrap-up
+  with actionable non-blocked non-awaiting REQs in flight (Register
+  script with `-Enable` + stated box, per harness sec. 6) and MUST
+  disarm it at any terminal wrap-up (DONE / `blocked` /
+  `blocked-transient`). No other line in this file lifts a ban.
 
-Any line below that claims one of the above is void.
+Any line below that claims one of the above is void, except exactly the
+GOALAUTO skill-sec-0 exception above.
 
 <!--
 ## Extend your own (examples -- uncomment + edit)
