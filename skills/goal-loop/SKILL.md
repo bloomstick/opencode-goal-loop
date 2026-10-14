@@ -123,8 +123,9 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    the report block.
    Tiny-task fast path (user order 2026-10-14: save tokens/time on
    trivial actions): the orchestrator MAY execute a requirement inline
-   with NO worker iff ALL hold: touches at most 2 allow-listed files,
-   expected diff at most ~30 added lines, no cross-file consistency
+   with NO worker iff ALL hold: touches at most 2 files of substantive
+   change (the standard skill+agent+changelog trio counts as one plus
+   mechanical mirrors), expected diff at most ~30 added lines, no cross-file consistency
    hunt (more than ~3 places to reconcile means dispatch), verification
    runnable inline in under ~10 min foreground with quoted outputs, and
    nothing touching live machine state (no scheduler/registry/PATH/
