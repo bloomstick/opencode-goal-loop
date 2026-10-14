@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+- `goal-loop`: RESUME phase (crash-safe continuation): manifest is
+  resumable state (per-REQ status `pending`|`dispatched`|`done`, Runs
+  record per dispatch with branch + prompt-file path + order text +
+  pushed SHA + report tail, prompt files + orders saved under
+  `.opencode/goal-loop/<slug>/prompts/` for byte-identical re-fire);
+  orchestrator commits AND pushes the goal branch after every manifest
+  mutation; no-redo invariant (pushed proof moves a REQ forward, never
+  backward). New sec. 8: on any goal turn with an existing manifest
+  (user says "continue" or re-runs `/goal` after a restart) read the
+  manifest, fetch origin, reconcile non-done REQs (pushed branch means
+  verify + integrate per LAND, absent/empty means re-fire the saved
+  prompt verbatim), continue from the first non-done REQ, report a
+  resume summary (recovered X, re-fired Y, redone: nothing or fail
+  loudly). Attended only: no schedules/services/watchers/polling or
+  retries. DONE still requires the `Landed:` proof.
+
 - `watch/` 0.1.4: working spinner swaps badge (green dot removed);
   self-update one-shot check + modal + install (one-shot, no intervals).
 
