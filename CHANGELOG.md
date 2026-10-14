@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- `goal-loop`: awaiting-input status (REQ-01): new per-REQ `awaiting-input`
+  state for a turn parked on a human-only question (skill sec. 5: ONLY the
+  human answer clears it back to `dispatched` with a new Runs entry, never
+  auto re-fired, never silently converted to/from `blocked`;
+  checkbox `- [ ]`); sec. 8 RESUME reconciles it as NOOP (skip, never
+  re-fire, never integrate, counted as `awaiting: <n>` in the resume
+  summary); the external supervisor parks the whole goal as NOOP
+  (`reason=awaiting-input awaiting:<n>`) while any REQ awaits input;
+  one-line `goal-orch` note. No autonomy added: sec. 0 ban stands.
+
 - `goal-loop`: external supervisor experiment (GOALAUTO, ban stands):
   `scripts/goal-supervisor/` holds an out-of-server Windows Scheduled
   Task watchdog (manifest + git stall detection, bounded re-fire via

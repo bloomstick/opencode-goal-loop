@@ -44,24 +44,29 @@ work runs as foreground `opencode run` processes, never as subagents.
 ## 2. Orchestrator loop (goal-orch, primary agent)
 
 Termination guarantee: every `/goal` invocation ends in the same
-invocation as DONE (all REQs `done` + sec. 7 proof) or explicit
-`blocked` (sec. 6 blocked report). No silent stop, no infinite loop:
+invocation as DONE (all REQs `done` + sec. 7 proof), explicit
+`blocked` (sec. 6 blocked report), or parked on `awaiting-input`
+(sec. 5: report names the REQ + pending question, then stop).
+No silent stop, no infinite loop:
 at most 1 initial run + 3 re-fires = 4 runs per REQ (WORK failures
 only), plus at most 3 transient retries per run that consume ZERO
 re-fire budget (sec. 2 step 5 TRANSIENT vs WORK, `retries: <n>/3`
 alongside `re-fires: <n>/3`). A run that exhausts its transient
 retries marks its REQ `blocked-transient` + wrap-up (sec. 6, still
-with the `Landed:` line). The three terminal paths are: (a) all-done,
+with the `Landed:` line). The terminal paths are: (a) all-done,
 (b) blocked-on-budget, (c) restart-mid-loop via sec. 8 RESUME (state
 survives on the goal branch + worker branches, loop continues to DONE
-or blocked on the next human turn; nothing runs unattended).
+or blocked on the next human turn; nothing runs unattended),
+(d) parked-awaiting-input (report names the REQ + pending question, then
+stop; the human answer clears it per sec. 5; nothing runs unattended).
 
 1. **Clarify / Resume.** If a manifest already exists for the goal
    (`.opencode/goal-loop/<slug>/reqs-manifest.md` - including the first
    message after a restart, where the user says "continue" or re-runs
    `/goal`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
-   and continue from the first non-done, non-blocked REQ (either
-   `blocked` or `blocked-transient` counts as blocked). Only clarify a fresh goal
+   and continue from the first non-done, non-blocked, non-awaiting REQ (either
+   `blocked` or `blocked-transient` counts as blocked; `awaiting-input`
+   counts as parked per sec. 5). Only clarify a fresh goal
    with no manifest. Do not code yet. Clarification is ONE round, max 3
    questions: propose atomic requirements (best guess, not open-ended
    questions) and put `recommend: accept all` first. The user confirms
@@ -69,7 +74,9 @@ or blocked on the next human turn; nothing runs unattended).
    below destructive impact by best guess, record each decision in the
    manifest Log, and drive to DONE/`blocked`. Mid-goal questions are
    allowed ONLY for (a) input only the human can give that blocks all
-   forward motion, or (b) an unlisted destructive power. Question-drip
+   forward motion, or (b) an unlisted destructive power. When the
+   orchestrator asks such a question it marks the REQ `awaiting-input`
+   per sec. 5 and stops; nothing automatic re-fires it. Question-drip
    (returning for one more preference at a time) is a loop stall and is
    banned with the same force as backgrounding. Standing orders: immediately after
    clarify/resume, read standing orders (global config copy deployed
@@ -132,13 +139,14 @@ or blocked on the next human turn; nothing runs unattended).
    push the goal branch, stop dispatching that REQ, and go to wrap-up
    (verify + land whatever passed per sec. 7, report `blocked` per
    sec. 6). Re-fire is per-REQ pre-integration only: it never re-fires
-   a `done` REQ and never bypasses the sec. 7 LAND proof.
+   a `done` or `awaiting-input` REQ and never bypasses the sec. 7 LAND proof.
 6. **Integrate sequentially.** Merge one worker at a time onto
    local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
    feeds recovered branches here), resolving conflicts,
    re-running the named green suite after each. Fix cross-worker seams
-   yourself. Only integrate runs that passed step 5; `blocked` and
-   `blocked-transient` REQs are skipped (their landed siblings still land).
+   yourself. Only integrate runs that passed step 5; `blocked`,
+   `blocked-transient`, and `awaiting-input` REQs are skipped (their
+   landed siblings still land).
 7. **Verify.** Full manifest acceptance: every requirement checked against
    its verification path (commands run + outputs, files checked). Frontend
    work adds an end-to-end pass with screenshots where available.
@@ -152,10 +160,13 @@ or blocked on the next human turn; nothing runs unattended).
    with the sec. 6 `Landed:` proof line. DONE uses the DONE shape;
    a budget-exhausted loop uses the sec. 6 `blocked` shape
    (`blocked-transient` for transient exhaustion; symmetric,
-   still carrying the `Landed:` line for whatever did land). No
+   still carrying the `Landed:` line for whatever did land). A turn parked
+   on `awaiting-input` is neither DONE nor `blocked`: it lands whatever
+   passed per sec. 7 (still with the `Landed:` line) and reports the REQ
+   plus the pending human question. No
    `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
-   for the next task. Nothing keeps running after DONE, `blocked`, or
-   `blocked-transient`.
+   for the next task. Nothing keeps running after DONE, `blocked`,
+   `blocked-transient`, or a parked `awaiting-input` turn.
 
 ## 3. Worker prompt file (eight parts, in order)
 
@@ -232,10 +243,17 @@ Per-REQ status is explicit: `pending` (never dispatched), `dispatched`
 (branch in flight, Runs record below), `done` (pushed proof integrated),
 `blocked` (WORK re-fire budget exhausted, evidence recorded, wrap-up done),
 `blocked-transient` (transient retries exhausted, evidence recorded,
-wrap-up done). Checkbox mirrors status: `- [ ]` for
-pending/dispatched/blocked/blocked-transient,
+wrap-up done), `awaiting-input` (human question pending; set by the
+orchestrator when it asks a human-only question per sec. 2 step 1;
+nothing automatic ever re-fires it, and the external supervisor parks
+the whole goal as NOOP while any REQ awaits input). Checkbox mirrors
+status: `- [ ]` for
+pending/dispatched/blocked/blocked-transient/awaiting-input,
 `- [x]` for done only. A `blocked` or `blocked-transient` REQ is never
-marked done.
+marked done. ONLY a human answer clears `awaiting-input` back to
+`dispatched` with a new Runs entry (budgets carry over; nothing is
+consumed while parked); a `blocked`/`blocked-transient` REQ is never
+silently converted to `awaiting-input` and vice versa.
 
 ```markdown
 # Goal: <one-line objective>
@@ -277,7 +295,10 @@ Rules:
   explicitly re-opens it
   (re-open resets `blocked`/`blocked-transient` to `dispatched` with a new
   Runs entry and fresh budgets -- 3 re-fires plus 3 transient retries,
-  recorded as `re-open: <date> reason`).
+  recorded as `re-open: <date> reason`). A REQ marked `awaiting-input`
+  is never re-fired and never integrated; only the human answer clears
+  it to `dispatched` per the status rule above, never a re-fire, never
+  RESUME, never the supervisor.
 - Budget accounting: every sec. 2 step 5 verify + re-fire + transient
   retry updates the Runs record (`run<N>` / `re-fire<N>` / `retry<N>`
   lines + `re-fires: <n>/3` alongside `retries: <m>/3`), then commits AND
@@ -300,9 +321,11 @@ After any resume (see sec. 8), the report opens with a resume summary
 line (before the per-worker detail):
 
 ```
-Resume: recovered <X> from pushed proof, re-fired <Y>, redone: <nothing | describe>
+Resume: recovered <X> from pushed proof, re-fired <Y>, awaiting: <n>, redone: <nothing | describe>
 ```
 
+`awaiting: <n>` counts REQs skipped as `awaiting-input` per sec. 8
+(never re-fired, never integrated).
 `redone: nothing` is the expected case; anything redone fails loudly
 with what was repeated and why the no-redo invariant (see sec. 5) broke.
 A resume summary alone is never DONE.
@@ -371,7 +394,10 @@ mandatory (isolation + remote backup before merge).
    budget-exhausted loop lands whatever passed the sec. 2 step 5
    checks the same way and reports `blocked` or `blocked-transient`
    per sec. 6 (still with
-   the `Landed:` proof for what did land).
+   the `Landed:` proof for what did land). A turn parked on
+   `awaiting-input` lands whatever passed the same way and reports the
+   pending human question (neither DONE nor `blocked`, still with the
+   `Landed:` line for what did land).
 
 Sec. 8 RESUME feeds recovered branches into steps 1-2 above; the landing
 proof is unchanged and still required for DONE, for `blocked`, and for
@@ -400,9 +426,15 @@ before any new dispatch:
 1. Read `.opencode/goal-loop/<slug>/reqs-manifest.md` (this file, not
    chat memory, is the truth). Run `git fetch origin` so reconciliation
    sees the live remote.
-2. Reconcile each non-done REQ against git (a `done` REQ is never
+2. Reconcile each non-done, non-awaiting REQ against git (a `done` REQ is never
    re-fired; a `blocked` or `blocked-transient` REQ resumes as-is unless
-   the user explicitly re-opens it per sec. 5, never silently re-fired):
+   the user explicitly re-opens it per sec. 5, never silently re-fired;
+   an `awaiting-input` REQ is NOOP: skip it entirely, never re-fire it,
+   never integrate it, and count it as `awaiting: <n>` in the sec. 6
+   resume summary):
+   - REQ marked `awaiting-input`: skip (NOOP). Never re-fire, never
+     integrate, even with pushed commits on origin; it waits for the
+     human answer, which clears it per sec. 5.
    - Branch with pushed commits on origin (branch exists AND its tip or
      recorded SHA is visible on origin): treat it as survived work.
      Verify the branch state (report tail + branch diff), then integrate
@@ -416,12 +448,13 @@ before any new dispatch:
      The sec. 2 step 5 budgets carry over: keep counting the recorded
      `re-fires: <n>/3` and `retries: <m>/3`, max 3 re-fires per REQ and
      max 3 transient retries per run, never a 4th fire and never a 4th wait.
-3. Continue the loop from the first non-done, non-blocked REQ (either
-   `blocked` or `blocked-transient` counts as blocked)
+3. Continue the loop from the first non-done, non-blocked, non-awaiting REQ
+   (either `blocked` or `blocked-transient` counts as blocked;
+   `awaiting-input` counts as parked, never dispatched)
    (sec. 2 steps 4-9): dispatch what has no branch, integrate what
    survived, verify-after-every-run per sec. 2 step 5, verify, land.
 4. Report a resume summary first (see sec. 6): recovered X from pushed
-   proof, re-fired Y, redone: nothing. If anything completed was
+   proof, re-fired Y, awaiting N, redone: nothing. If anything completed was
    re-executed, fail loudly: name the REQ, what was repeated, and why.
    Redo of a `done` REQ is a bug per the sec. 5 no-redo invariant:
    presence of pushed proof moves a REQ forward, never backward.
@@ -435,5 +468,7 @@ passed and reports
 line). The driver re-fire and the transient retry (sec. 2 step 5) are
 per-REQ pre-integration
 inside one invocation; RESUME never re-fires `done` and never silently
-re-opens `blocked` or `blocked-transient`. RESUME is the only restart
+re-opens `blocked` or `blocked-transient`, and never touches
+`awaiting-input` (only the human answer clears it per sec. 5).
+RESUME is the only restart
 path: it never adds autonomy beyond sec. 2 step 5.

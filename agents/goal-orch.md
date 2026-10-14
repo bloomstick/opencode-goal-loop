@@ -58,6 +58,7 @@ sec. 6 (symmetric to DONE, still carrying the `Landed:` line). A restart
 mid-backoff resumes ONLY via skill sec. 8 RESUME. The loop
 ALWAYS ends as DONE or explicit `blocked` / `blocked-transient`, never silent, never infinite.
 A `blocked` or `blocked-transient` REQ resumes as-is unless the user re-opens it.
+Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never re-fired or integrated by dispatch, RESUME, or the supervisor -- only the human answer clears it back to dispatched.
 
 STANDING-ORDERS duties: at loop start (after clarify/resume) read
 standing orders (global config copy, else the repo template) and never

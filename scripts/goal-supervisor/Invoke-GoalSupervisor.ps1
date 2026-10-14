@@ -7,8 +7,12 @@
 # manifest, then re-invokes the orchestrator foreground as a task child.
 #
 # Stall rule: manifest has actionable REQs (pending/dispatched, never
-# blocked/done) AND no manifest/branch activity for StallMinutes AND no
-# supervisor attempt inside CooldownMinutes AND attempts < MaxAttempts.
+# blocked/done/awaiting-input) AND no manifest/branch activity for
+# StallMinutes AND no supervisor attempt inside CooldownMinutes AND
+# attempts < MaxAttempts AND no REQ awaiting human input. Any
+# awaiting-input REQ parks the whole goal: the supervisor exits NOOP
+# reporting awaiting:<n> until the human answer clears it per skill
+# sec. 5 (RESUME on a human turn still proceeds per-REQ per sec. 8).
 # Otherwise it exits NOOP (a quiet run is the expected steady state).
 #
 # Safety: bounded attempts with self-disable, task-level ExecutionTimeLimit
@@ -64,10 +68,13 @@ try {
 } catch {}
 
 $actionable = @()
+$awaiting = 0
 foreach ($l in (Get-Content $manifest)) {
   if ($l -match '^-\s*\[\s\]\s*(REQ-\d+).*status:\s*(\S+)') {
     if ($Matches[2] -eq 'pending' -or $Matches[2] -eq 'dispatched') {
       $actionable += ($Matches[1] + ':' + $Matches[2])
+    } elseif ($Matches[2] -eq 'awaiting-input') {
+      $awaiting += 1
     }
   }
 }
@@ -76,6 +83,7 @@ $now = (Get-Date).ToUniversalTime()
 $idleMin = ($now - $lastActivity.ToUniversalTime()).TotalMinutes
 $sinceAttemptMin = ($now - $lastAttempt.ToUniversalTime()).TotalMinutes
 
+if ($awaiting -gt 0) { SLog ("NOOP slug=" + $Slug + " reason=awaiting-input awaiting:" + $awaiting + " actionable:" + $actionable.Count + " (parked: human input pending, nothing re-fired)"); exit 0 }
 if ($actionable.Count -eq 0) { SLog "NOOP slug=$Slug reason=nothing-actionable"; exit 0 }
 if ($idleMin -lt $StallMinutes) {
   SLog ("NOOP slug=" + $Slug + " reason=active idleMin=" + [math]::Round($idleMin,1))
