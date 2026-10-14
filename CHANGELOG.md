@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+- `goal-supervisor`: live-fire e2e in contained fixture (REQ-02 GS2,
+  2026-10-14): Temp repo `e2e-live` + local bare origin, one-goal
+  `probelive` manifest STALL-aged; task `goal-supervisor-probelive`
+  armed `-Enable -IntervalMinutes 1 -BoxHours 1` (exec cap tightened
+  PT1H -> PT15M one-off). Chain observed: STALL -> REFIRE exit 0 ->
+  worker marker + `feat/probe-w1` on local origin -> DONE on fixture
+  main -> post-DONE NOOP; then task unregistered (verified absent) and
+  fixture dirs removed. See `docs/crash-log-harness.md` sec. 6 e2e
+  section. Zero product impact.
+
 - `goal-loop`: arm-at-start rule + Register working directory (REQ-01):
   skill sec. 2 gains the arm-at-start rule (after the manifest is
   written + pushed the orchestrator MAY arm the EXTERNAL supervisor
