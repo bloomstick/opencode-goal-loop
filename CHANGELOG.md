@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- `goal-loop`: crash-log harness (`docs/crash-log-harness.md`,
+  observation only): debuggable environment for any future automation
+  experiment without lifting sec. 0. Verified Windows log locations
+  (live server log, per-shell outputs, snapshots, legacy
+  `.opencode/goals` locks, plugin cache), grep-backed signatures
+  (plugin load repeats, spawned powershell children, 53-line
+  deleted-worktree snapshot WARN burst observed 2026-10-14), per-event
+  incident protocol (UTC window, run-id correlation, git-vs-origin
+  state, verdict bucket), and guardrails (time box, kill switch,
+  rollback criteria). No processes, no schedules, no watchers.
+
 - `goal-loop`: single-round clarification (max 3 questions, recommend
   first), then best-guess + manifest-logged decisions to DONE; mid-goal
   questions only for human-only blockers or unlisted destructive powers.
