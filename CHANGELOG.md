@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+- `goal-supervisor` readable status + in-flight verdict (REQ-01,
+  2026-10-15): `Invoke-GoalSupervisor.ps1` logs `REFIRE-START slug=<s>
+  attempt=<n>/<max> reqs=<list>` immediately before spawning
+  `opencode run` (the existing `REFIRE exit=` line stays the completion
+  marker); `Get-GoalSupervisors.ps1` output rewritten to local times
+  (`HH:MM` + `N min ago`, no raw UTC, no epoch), translated result codes
+  (`ok` / `never ran` / `failed, code N`), reasons and progress in words,
+  box countdown (`expires in Xh Ym (HH:MM local)`), and a new
+  second-ranked `RE-FIRING` verdict (STALE > RE-FIRING > RUNNING >
+  IDLE-DISABLED > FAILING > QUIET) when the log ends in REFIRE-START
+  with no later REFIRE exit or SERVER-DOWN.
+
 - `goal-loop`: backoff waits removed entirely (user order 2026-10-15):
   TRANSIENT failures re-dispatch immediately, max 3 retries, zero waits
   and zero sleeps; counters, budgets, `blocked-transient`, RESUME, and

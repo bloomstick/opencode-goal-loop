@@ -175,6 +175,7 @@ if ($DryRun) { SLog ("DRYRUN would run: opencode " + ($refireArgs -join ' ')); T
 # self-disable, so recovery stays possible.
 $code = -1
 $launchFailed = $false
+SLog ("REFIRE-START slug=" + $Slug + " attempt=" + ($attempts + 1) + "/" + $MaxAttempts + " reqs=" + $reqs)
 try {
   & opencode @refireArgs
   $code = $LASTEXITCODE
