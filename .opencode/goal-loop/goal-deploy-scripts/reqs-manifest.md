@@ -4,5 +4,7 @@ Base: 992e2cc4673b108f141d00bc88a2e0687101e51f | Date: 2026-10-14 | Slug: goal-d
 ## DAG
 - REQ-01: no deps
 ## Runs
+### REQ-01
+- dispatch: 2026-10-14 branch feat/goal-deploy-req01 prompt `prompts/REQ-01.GD1.md` order "Implement REQ-01 installer deploys scripts + references per prompt file" re-fires: 0/3 retries: 0/3
 ## Log
 - 2026-10-14 goal opened; gap: installed skill references supervisor scripts that exist only in repo checkouts
