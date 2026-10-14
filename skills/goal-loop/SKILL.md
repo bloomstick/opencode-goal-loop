@@ -43,21 +43,32 @@ work runs as foreground `opencode run` processes, never as subagents.
 
 ## 2. Orchestrator loop (goal-orch, primary agent)
 
-1. **Clarify.** Do not code yet. Propose atomic requirements (best guess,
-   not open-ended questions). User confirms or picks `recommend` for all.
-2. **Manifest.** Write `reqs-manifest.md` (see §5) under
-   `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file — not
-   chat memory — is the acceptance record.
+1. **Clarify / Resume.** If a manifest already exists for the goal
+   (`.opencode/goal-loop/<slug>/reqs-manifest.md` - including the first
+   message after a restart, where the user says "continue" or re-runs
+   `/goal`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
+   and continue from the first non-done REQ. Only clarify a fresh goal
+   with no manifest. Do not code yet. Propose atomic requirements
+   (best guess, not open-ended questions). User confirms or picks
+   `recommend` for all.
+2. **Manifest.** Write `reqs-manifest.md` (see sec. 5) under
+   `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
+   chat memory, is the acceptance record and the resumable state for
+   sec. 8 RESUME. Commit AND push the goal branch after every manifest
+   mutation (see sec. 5 rules).
 3. **DAG.** Map dependencies. No-dependency requirements may run parallel;
    dependent ones run in order. Same-file edits always sequential.
 4. **Dispatch.** Fetch `origin` first; base every worker branch on the
    `origin/main` tip so stale bases cannot strand work. One worktree +
-   branch per worker (§4). Branch-per-worker stays mandatory even though
+   branch per worker (see sec. 4). Branch-per-worker stays mandatory even though
    the solo flow uses no PRs (isolation + remote backup before merge).
-   Write a six-part worker prompt file (§3), run it foreground, collect
+   Write a six-part worker prompt file (see sec. 3) saved under
+   `prompts/` (see sec. 5), record the run in the manifest, commit AND
+   push the goal branch, then run it foreground and collect
    the report block.
 5. **Integrate sequentially.** Merge one worker at a time onto
-   local `main` with `git merge --no-ff` (§7 LAND), resolving conflicts,
+   local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
+   feeds recovered branches here), resolving conflicts,
    re-running the named green suite after each. Fix cross-worker seams
    yourself.
 6. **Verify.** Full manifest acceptance: every requirement checked against
@@ -73,7 +84,11 @@ work runs as foreground `opencode run` processes, never as subagents.
 
 ## 3. Worker prompt file (six parts, in order)
 
-Write to a temp prompt file (e.g. `$TEMP/prompt-<code>.md`):
+Write to a saved prompt file under the goal dir (never $TEMP only),
+e.g. `.opencode/goal-loop/<slug>/prompts/REQ-01.<code>.md`. The saved
+file plus the recorded order text is the byte-identical re-fire source
+for sec. 8 RESUME; record its path in the manifest Runs record (sec. 5)
+before dispatch:
 
 1. **Preamble:** base SHA + `git log --oneline -3` verify, docs to read
    first (ordered), skill to load (`goal-loop`).
@@ -110,6 +125,11 @@ Generic (any repo), one foreground call per worker batch, large timeout:
 opencode run --auto --agent goal-worker -f <prompt-file> "<order>"
 ```
 
+<prompt-file> is the saved file under
+`.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
+<order> must match the manifest Runs record verbatim so a re-fire is
+byte-identical.
+
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
 `opencode run` as a foreground process so the server never holds background
 children): `Invoke-Dispatch.ps1` for one worker, `Invoke-Fanout.ps1` for
@@ -121,26 +141,63 @@ its branch/worktree. The fan-out `-Timeout` cap stops hung jobs.
 
 ## 5. Manifest format (`reqs-manifest.md`)
 
+The manifest is resumable state: everything needed to continue after a
+restart lives in the manifest + git, not in chat memory. Workers never
+edit the manifest directly; they report, the orchestrator records.
+
+Per-REQ status is explicit: `pending` (never dispatched), `dispatched`
+(branch in flight, Runs record below), `done` (pushed proof integrated).
+Checkbox mirrors status: `- [ ]` for pending/dispatched, `- [x]` for done.
+
 ```markdown
 # Goal: <one-line objective>
-Base: <sha> | Date: <yyyy-mm-dd>
-- [ ] REQ-01 <requirement> — verify: <command/file check>
-- [ ] REQ-02 <requirement> — verify: <command/file check>
+Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
+- [ ] REQ-01 <requirement> -- verify: <command/file check> -- status: pending
+- [ ] REQ-02 <requirement> -- verify: <command/file check> -- status: dispatched
 ## DAG
 - REQ-01: no deps
 - REQ-02: after REQ-01
+## Runs
+### REQ-02
+- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>"
+- pushed: <sha or none-yet> (<date>) | report-tail: <last report lines>
 ## Log
-- <date> REQ-01 done by <branch> — <proof>
+- <date> REQ-01 done by <branch> -- <proof>
 ```
 
-Orchestrator updates status + log per completed requirement. Workers never
-edit the manifest directly; they report, the orchestrator records.
+Rules:
+
+- Save every worker prompt file + order text under the goal dir
+  (`.opencode/goal-loop/<slug>/prompts/`, e.g.
+  `prompts/REQ-01.<code>.md` plus the order string in the Runs record)
+  so a re-fire is byte-identical: never rely on $TEMP copies after a
+  restart, they do not survive one.
+- Orchestrator commits AND pushes the goal branch after every manifest
+  mutation (status change, new Runs entry, pushed SHA, log line). Cheap
+  insurance: disk + remote both survive a restart. The goal branch is
+  the orchestrator's own branch, distinct from worker branches and from
+  `main`; pushing it does not push `main` (only sec. 7 LAND pushes `main`).
+- Invariant (no-redo): re-running any completed step is a bug. Presence
+  of pushed proof moves a REQ forward, never backward. A REQ marked
+  `done` is never re-fired; a `dispatched` REQ with pushed commits on
+  origin is integrated, not redone (see sec. 8 RESUME).
 
 ## 6. Report
 
 Per worker + integration: task-code, files, SLOC structural-vs-cheap
 split, commands + outputs, `Caveats: none` or explicit list (unverified
 areas, risks, follow-ups). Stdout MUST end with the §3 report block last.
+
+After any resume (see sec. 8), the report opens with a resume summary
+line (before the per-worker detail):
+
+```
+Resume: recovered <X> from pushed proof, re-fired <Y>, redone: <nothing | describe>
+```
+
+`redone: nothing` is the expected case; anything redone fails loudly
+with what was repeated and why the no-redo invariant (see sec. 5) broke.
+A resume summary alone is never DONE.
 
 DONE block gains a `Landed:` line — `origin/main` SHA, local==remote
 proof (`git rev-parse main` vs `git ls-remote origin main`), tag/release
@@ -174,4 +231,47 @@ mandatory (isolation + remote backup before merge).
    - Fail loudly otherwise — an unproven push is never DONE.
 5. Remove TEMP worktrees (`git worktree remove <path>`). Keep branches
    as remote backup until the report is accepted.
-6. DONE, with the §6 `Landed:` line in the report.
+6. DONE, with the sec. 6 `Landed:` line in the report.
+
+Sec. 8 RESUME feeds recovered branches into steps 1-2 above; the landing
+proof is unchanged and still required for DONE.
+
+## 8. RESUME phase (crash-safe continuation, attended only)
+
+A server restart kills the orchestrator session but the work survives:
+manifest + prompt files are committed and pushed on the goal branch, and
+worker commits are pushed on worker branches. RESUME rebuilds session
+state from disk + remote; it adds no schedules, services, watchers,
+polling loops, idle hooks, retries, or background work. It runs only on
+a human goal turn ("continue" or a re-run of `/goal`) when a manifest
+exists. One invocation still ends at DONE or at the next human turn;
+nothing keeps running after that (see sec. 0 hard rules).
+
+On ANY goal turn with an existing manifest, the orchestrator MUST,
+before any new dispatch:
+
+1. Read `.opencode/goal-loop/<slug>/reqs-manifest.md` (this file, not
+   chat memory, is the truth). Run `git fetch origin` so reconciliation
+   sees the live remote.
+2. Reconcile each non-done REQ against git:
+   - Branch with pushed commits on origin (branch exists AND its tip or
+     recorded SHA is visible on origin): treat it as survived work.
+     Verify the branch state (report tail + branch diff), then integrate
+     it per sec. 7 LAND steps 1-2 (merge ONE at a time, green suite
+     after each). Mark the REQ `done` only after its merge + green run;
+     commit AND push the goal branch on each mark.
+   - Branch absent, or present with no pushed commits: re-fire the saved
+     prompt file verbatim (`prompts/REQ-0<code>.md` + the recorded order
+     text, byte-identical, no edits). Record the new run in Runs, commit
+     AND push the goal branch, then dispatch foreground per sec. 4.
+3. Continue the loop from the first non-done REQ (sec. 2 steps 4-8):
+   dispatch what has no branch, integrate what survived, verify, land.
+4. Report a resume summary first (see sec. 6): recovered X from pushed
+   proof, re-fired Y, redone: nothing. If anything completed was
+   re-executed, fail loudly: name the REQ, what was repeated, and why.
+   Redo of a `done` REQ is a bug per the sec. 5 no-redo invariant:
+   presence of pushed proof moves a REQ forward, never backward.
+
+Resume flows into LAND normally: DONE still requires the sec. 6
+`Landed:` proof (local `main` == `origin/main` plus every worker commit
+contained in `origin/main`). A resume summary alone is never DONE.
