@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- `goal-supervisor`: tighten cadence to 1-min ticks + 3-min stall
+  (REQ-01, 2026-10-14): Register `-IntervalMinutes` default 5 -> 1
+  (2 h box, Disabled default, exec cap, IgnoreNew unchanged);
+  Invoke `-StallMinutes` default 15 -> 3 (comment + param only);
+  harness sec. 6 defaults line now 1 min / 2 h. Worst-case
+  stop-to-refire drops from the old ~20-minute bound to ~4 min. GAP threshold logic
+  unchanged (3x interval): with 1-min ticks a missed-run gap trips at 3 min.
+
 - `goal-supervisor`: live-fire e2e in contained fixture (REQ-02 GS2,
   2026-10-14): Temp repo `e2e-live` + local bare origin, one-goal
   `probelive` manifest STALL-aged; task `goal-supervisor-probelive`

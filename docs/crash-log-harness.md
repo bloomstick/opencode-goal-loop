@@ -79,7 +79,7 @@ For ANY suspected crash/restart during an experiment, record:
   2026-10-14): arm ONLY at a non-terminal wrap-up with actionable
   non-blocked non-awaiting REQs in flight, via
   Register-GoalSupervisor.ps1 with `-Enable` and a stated time box
-  (defaults: 5 min interval, 2 h expiry); record task name + box in the
+  (defaults: 1 min interval, 2 h expiry); record task name + box in the
   manifest Runs/Log + report. Disarm at any terminal wrap-up (DONE /
   `blocked` / `blocked-transient`) via Unregister-ScheduledTask even if
   the box has not expired; record + report it. Never arm while any REQ
@@ -101,10 +101,10 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
 - Scripts: `scripts/goal-supervisor/Invoke-GoalSupervisor.ps1`
   (detect + bounded re-fire + own logging + self-disable) and
   `scripts/goal-supervisor/Register-GoalSupervisor.ps1` (registers the
-  task DISABLED by default, 5 min interval, 2 h expiry, 1 h execution
-  cap, IgnoreNew so runs never pile up).
+  task DISABLED by default, 1 min interval, 2 h expiry, 1 h execution
+  cap, IgnoreNew so runs never pile up; worst-case stop-to-refire ~4 min).
 - Stall rule: actionable REQs (pending/dispatched only) + no
-  manifest/branch activity for 15 min + 10 min cooldown + max 3
+  manifest/branch activity for 3 min + 10 min cooldown + max 3
   attempts; anything else exits NOOP (quiet is the steady state).
 - Per-goal runtime files (next to the manifest, feed sec. 3 above):
   `supervisor.log` (every decision line) and `supervisor-state.json`
