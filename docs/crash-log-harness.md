@@ -144,12 +144,22 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   when present); manifest REQ counts by status; supervisor-state.json
   fields (attempts / lastAttemptUtc / lastCheckUtc); the last `-Tail`
   supervisor.log lines under an `output:` label.
-- Verdicts (exactly one per goal, first match wins): STALE (RepoRoot or
-  goal dir gone) / RUNNING (supervisor.log fresh within 3x the task
-  tick) / IDLE-DISABLED (task Disabled, log not fresh) / FAILING
+- Verdicts (exactly one per goal, first match wins, ranked): STALE (RepoRoot or
+  goal dir gone) / RE-FIRING (log ends in REFIRE-START with no later
+  REFIRE exit= or SERVER-DOWN: a nested recovery run is in flight since
+  the stamp shown, be patient) / RUNNING (supervisor.log fresh within 3x
+  the task tick) / IDLE-DISABLED (task Disabled, log not fresh) / FAILING
   (LastTaskResult non-zero) / QUIET (log staler than 3x tick: box
   expiry or sleeping machine). No tasks at all prints
   `no supervisors registered` and exits 0.
+- Readable display (REQ-01): local times only (`HH:MM` + `N min ago`,
+  never raw UTC, never epoch); result codes translated (`ok` /
+  `never ran` / `failed, code N - see the log tail below`); reasons in
+  words (`active` = workers busy, goal moving; `cooldown` = waiting N
+  min before next retry; `STALL` = quiet X min, re-fired); progress in
+  words (`1 done, 2 in progress, 3 waiting`); box as `expires in Xh Ym
+  (HH:MM local)`; log tail stamps converted to local with age. Raw codes
+  stay in parentheses where cheap; nothing else is dropped.
 - Reads only: task Arguments (-RepoRoot / -Slug / -IntervalMinutes),
   manifest, state file, log. It changes nothing.
 
