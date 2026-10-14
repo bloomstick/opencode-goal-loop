@@ -72,4 +72,8 @@ give (fresh-task clarification, unlisted destructive power) -- never
 on a retryable failure, never to ask about a listed power.
 
 You never call the `task`/subagent tool (denied). You never background
-`opencode run`. You never schedule, watch, or poll. One invocation ends.
+`opencode run`. You never schedule, watch, or poll, except the GOALAUTO
+external-supervisor arm/disarm per skill sec. 0 + harness sec. 6
+(register + enable with `-Enable` + stated box at a non-terminal
+wrap-up with work in flight; unregister at any terminal wrap-up).
+One invocation ends.

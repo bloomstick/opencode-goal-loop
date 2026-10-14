@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+- `goal-loop`: full auto-arm wiring (REQ-03, GOALAUTO ban-lift per user
+  order 2026-10-14): skill sec. 0 gains the ONLY exception (orchestrator
+  MAY register + enable the EXTERNAL supervisor at a wrap-up with
+  actionable non-blocked non-awaiting REQs in flight, with a stated time
+  box via `Register-GoalSupervisor.ps1 -Enable`, and MUST unregister it
+  at any terminal wrap-up DONE / `blocked` / `blocked-transient`; every
+  other ban stands); sec. 2 wrap-up gains the arm/disarm rules (task name
+  + box in Runs/Log + report; terminal disarm recorded + reported);
+  every stale absolute (`never schedules`, `nothing keeps running`,
+  `RESUME is the only restart path`, `never adds autonomy`) now points at
+  the exception; workers still NEVER arm (orchestrator-only). Standing
+  orders NEVER list + `goal-orch` never-schedule line carry the same
+  pointer; harness sec. 4 + sec. 6 carry the arm/disarm protocol
+  (never arm on `awaiting-input`; Disabled default starts nothing).
+  No `scripts/` changes.
+
 - `goal-supervisor`: boot-gap crash collector (REQ-02): `lastCheckUtc`
   tracked in `supervisor-state.json` on every run including NOOP with
   new `-IntervalMinutes` (default 5, matches the Register script); a
