@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+- `goal-loop`: arm-at-start rule + Register working directory (REQ-01):
+  skill sec. 2 gains the arm-at-start rule (after the manifest is
+  written + pushed the orchestrator MAY arm the EXTERNAL supervisor
+  with the same Register call + stated box, task + box in Runs/Log +
+  report; idempotent via unregister-first; disarm-at-terminal and
+  never-arm-on-awaiting-input unchanged; same GOALAUTO sec. 0
+  exception, no new autonomy); Register script gains
+  `-WorkingDirectory` (defaults to the RepoRoot value, passed to the
+  task action so a re-fired run starts in the repo); one-line
+  `goal-orch` + harness sec. 6 pointers.
+
 - `goal-loop`: full auto-arm wiring (REQ-03, GOALAUTO ban-lift per user
   order 2026-10-14): skill sec. 0 gains the ONLY exception (orchestrator
   MAY register + enable the EXTERNAL supervisor at a wrap-up with

@@ -76,4 +76,6 @@ You never call the `task`/subagent tool (denied). You never background
 external-supervisor arm/disarm per skill sec. 0 + harness sec. 6
 (register + enable with `-Enable` + stated box at a non-terminal
 wrap-up with work in flight; unregister at any terminal wrap-up).
+Arm-at-start MAY also arm right after the manifest is written + pushed
+(same Register call, idempotent, never on awaiting-input).
 One invocation ends.
