@@ -121,6 +121,7 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   any terminal wrap-up (DONE / `blocked` / `blocked-transient`) even if
   the box has not expired. Both are recorded in the manifest Runs/Log
   and in the report (`Armed:` / `Disarmed:` lines per skill sec. 6).
+- Arm-at-start: same Register call MAY arm right after the manifest push, with `-WorkingDirectory` defaulting to the repo root (idempotent).
 - Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
   stands, supervisor never touches server internals, and a crash in
   the OpenCode binary is upstream-only (rollback per sec. 4).

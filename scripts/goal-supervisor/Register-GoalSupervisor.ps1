@@ -11,16 +11,18 @@ param(
   [Parameter(Mandatory=$true)][string]$Slug,
   [int]$IntervalMinutes = 5,
   [int]$BoxHours = 2,
-  [switch]$Enable
+  [switch]$Enable,
+  [string]$WorkingDirectory = ""
 )
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrEmpty($WorkingDirectory)) { $WorkingDirectory = $RepoRoot }
 
 $taskName = "goal-supervisor-$Slug"
 $worker = Join-Path $PSScriptRoot 'Invoke-GoalSupervisor.ps1'
 if (-not (Test-Path $worker)) { throw "supervisor script missing: $worker" }
 
 $arg = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$worker`" -RepoRoot `"$RepoRoot`" -Slug `"$Slug`" -TaskName `"$taskName`""
-$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $arg -WorkingDirectory $WorkingDirectory
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
   -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) `
   -RepetitionDuration (New-TimeSpan -Hours $BoxHours)

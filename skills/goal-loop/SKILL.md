@@ -36,9 +36,9 @@ work runs as foreground `opencode run` processes, never as subagents.
   the orchestrator pushes `main`, in §7 LAND).
 
 GOALAUTO exception (user order 2026-10-14, the ONLY sec. 0 exception):
-at a wrap-up that leaves actionable non-blocked non-awaiting REQs in
-flight, the orchestrator MAY register + enable the EXTERNAL supervisor
-only (Windows Scheduled Task outside the OpenCode server, per
+after the manifest is written + pushed, or at a wrap-up that leaves
+actionable non-blocked non-awaiting REQs in flight, the orchestrator
+MAY register + enable the EXTERNAL supervisor only (Windows Scheduled Task outside the OpenCode server, per
 docs/crash-log-harness.md sec. 6, via
 scripts/goal-supervisor/Register-GoalSupervisor.ps1 with `-Enable` and
 a stated time box), and MUST unregister it at any terminal wrap-up
@@ -100,7 +100,13 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
    chat memory, is the acceptance record and the resumable state for
    sec. 8 RESUME. Commit AND push the goal branch after every manifest
-   mutation (see sec. 5 rules).
+   mutation (see sec. 5 rules). Arm-at-start (same GOALAUTO sec. 0
+   exception): after the manifest is written + pushed, the orchestrator
+   MAY arm the EXTERNAL supervisor (same Register-GoalSupervisor.ps1
+   with `-Enable` and a stated time box, per harness sec. 6; record
+   task name + box in Runs/Log + report). Arming is idempotent
+   (Register unregisters the name first). Never arm while any REQ is
+   `awaiting-input`; disarm-at-terminal per step 9 is unchanged.
 3. **DAG.** Map dependencies. No-dependency requirements may run parallel;
    dependent ones run in order. Same-file edits always sequential.
 4. **Dispatch.** Fetch `origin` first; base every worker branch on the
@@ -181,6 +187,10 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    plus the pending human question. No
    `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
    for the next task.
+   Arm-at-start (same GOALAUTO sec. 0 exception): after the manifest is
+   written + pushed, the orchestrator MAY arm the EXTERNAL supervisor
+   (same Register call, stated box, record task + box in Runs/Log);
+   idempotent (Register unregisters the name first).
    Arm (non-terminal wrap-up only, GOALAUTO sec. 0 exception): when the
    turn parks with actionable non-blocked non-awaiting REQs still in
    flight, the orchestrator MAY register + enable the EXTERNAL
