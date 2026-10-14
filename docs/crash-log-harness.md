@@ -124,6 +124,7 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   and in the report (`Armed:` / `Disarmed:` lines per skill sec. 6).
 - Arm-at-start: same Register call (global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`)
   MAY arm right after the manifest push, with `-WorkingDirectory` defaulting to the repo root (idempotent).
+  Init runs first via scripts/goal-init.ps1 (commands/goal.md Step 0).
 - Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
   stands, supervisor never touches server internals, and a crash in
   the OpenCode binary is upstream-only (rollback per sec. 4).

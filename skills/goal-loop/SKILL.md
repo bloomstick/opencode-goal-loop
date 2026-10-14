@@ -95,11 +95,17 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    clarify/resume, read standing orders (global config copy deployed
    by `Install-GoalLoop.ps1`, falling back to the repo
    `standing-orders.md` template) and never gate on a listed power
-   again; anything outside the list still asks. Attachments: record each
-   `/goal` user-attached file as an ORIGINAL absolute path in the manifest
-   Attachments block (sec. 5), one per line, in received order, before any
-   dispatch (`Attachments: none` when empty, no copies). Re-fire and
-   missing-file rules: see step 5.
+   again; anything outside the list still asks. Step 0 first
+   (commands/goal.md): run scripts/goal-init.ps1 and quote its MACHINE
+   block; STOP on failure. Attachments (orch-side only): save each
+   `/goal` user-attached file VERBATIM to
+   `<goaldir>/attachments/<original-name>` before the init call (only the
+   orchestrator ever sees the content); the manifest Attachments block
+   holds SAVED paths + sha256 (sec. 5). Clarify-check: if the user
+   message claims an attachment but none arrived (no `<file>` blocks, no
+   paths), STOP and ask for the path/content as `awaiting-input` instead
+   of running blind. Workers receive NO attachments, never. Re-fire
+   rules: see step 5.
 2. **Manifest.** Write `reqs-manifest.md` (see sec. 5) under
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
    chat memory, is the acceptance record and the resumable state for
@@ -123,11 +129,10 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    foreground and collect the report block. The prompt Preamble names the
    EXACT skill sections and files the worker must read (e.g. sec. 5 +
    sec. 8 only); the worker reads nothing beyond that list without
-   recording why. Forward attachments: append one `-f` per manifest
-   Attachments path AFTER `-f <prompt-file>`, in manifest order (sec. 4);
-   record the exact set in the Runs record `files:` list (sec. 5,
-   `files: none` when empty). Re-fire rules and the missing-file rule:
-   see step 5. Bounded fan-out: file-disjoint REQs MAY dispatch in
+   recording why. No attachments on worker dispatches, ever: the worker
+   `opencode run` call carries `-f <prompt-file>` ONLY, and the Runs
+   record carries no attachment field. Re-fire rules: see step 5.
+   Bounded fan-out: file-disjoint REQs MAY dispatch in
    parallel, at most 3 concurrent FOREGROUND runs in one shell call that
    waits for all of them (never background persistence: server-held
    background children restarted the server 3 times on 2026-10-12, see
@@ -159,7 +164,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
      acceptance item met with proof (commands + outputs, files checked).
    A TRANSIENT failure triggers bounded backoff INSIDE the turn: print
    one progress line per wait, wait, then re-dispatch the identical run
-   (same prompt + order + `-f` set: the SAME attempt, ZERO re-fire
+   (same prompt + order: the SAME attempt, ZERO re-fire
    budget). Max 3 transient retries per run with growing waits (2 min,
    then 5 min, then 10 min); waits are fixed sleeps announced up front,
    never condition polling, never schedules except the GOALAUTO
@@ -175,7 +180,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    + worker branches), never by new autonomy except the GOALAUTO
    external supervisor per sec. 0.
    On a WORK failure (completed run, any check failing), re-fire the SAME
-   saved prompt + order + `-f` set (byte-identical, no edits), foreground
+   saved prompt + order (byte-identical, no edits), foreground
    per sec. 4. Budget: max 3 re-fires per REQ, counted in the manifest
    Runs record as `re-fires: <n>/3` alongside `retries: <n>/3` (sec. 5,
    separate counters, never interchangeable). Each re-fire appends a
@@ -186,11 +191,11 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    and go to wrap-up (steps 6-9, report `blocked` per sec. 6). Re-fire
    is per-REQ pre-integration only: it never re-fires a `done` or
    `awaiting-input` REQ and never bypasses the sec. 7 LAND proof.
-   Missing attachment at (re-)fire time is evidence, never silent: when a
-   dispatch cannot launch because an `-f` path is gone, classify per this
-   step (TRANSIENT while the dispatch died before a verifiable report was
+   A missing saved copy at re-fire time is evidence, never silent: when a
+   path under `<goaldir>/attachments/` is gone, classify per this step
+   (TRANSIENT while the dispatch died before a verifiable report was
    possible, else WORK failure feeding the re-fire budget) and record
-   which path was missing with the last output.
+   which saved path was missing with the last output.
 6. **Integrate sequentially.** Merge one worker at a time onto
    local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
    feeds recovered branches here; fan-out runs land here one by one),
@@ -235,7 +240,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
 
 Write to a saved prompt file under the goal dir (never $TEMP only),
 e.g. `.opencode/goal-loop/<slug>/prompts/REQ-01.<code>.md`. The saved
-file plus the recorded order text plus the recorded `files:` `-f` set is
+file plus the recorded order text is
 the byte-identical re-fire source for sec. 8 RESUME; record its path in
 the manifest Runs record (sec. 5) before dispatch.
 
@@ -259,9 +264,9 @@ The prompt carries deltas only, in order:
    other workers/requirements).
 3. **Scope:** allowed files ONLY (new file or explicit list) + numbered
    requirements + verification path per requirement. Attachments:
-   user-attached files arrive as message attachments AND are editable
-   inputs for that dispatch, including outside-the-repo paths; they join
-   the worker editable scope for that dispatch only, while the
+   workers receive NO attachments; the saved copies under
+   `<goaldir>/attachments/` are orchestrator-side reference only and
+   never join the worker scope, while the
    allowed-files list still governs everything else. Branch-only still
    holds (workers never push `main`).
 4. **Acceptance deltas:** owning worktree dir, named green suite with
@@ -277,17 +282,15 @@ the worker's full context.
 Generic (any repo), one foreground call per worker batch, large timeout:
 
 ```powershell
-opencode run --auto --agent goal-worker -f <prompt-file> [-f <attachment>...] "<order>"
+opencode run --auto --agent goal-worker -f <prompt-file> "<order>"
 ```
 
 <prompt-file> is the saved file under
 `.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
 <order> must match the manifest Runs record verbatim so a re-fire is
-byte-identical. Each <attachment> is one manifest Attachments absolute
-path, appended AFTER `-f <prompt-file>` in manifest order; the Runs
-record `files:` list carries the exact `-f` set (sec. 5; re-fire and
-missing-file rules per sec. 2 step 5). The supervisor re-invokes the
-ORCHESTRATOR with the manifest Attachments `-f` set appended; the
+byte-identical. Worker dispatches carry `-f <prompt-file>` ONLY, never
+attachments (re-fire rules per sec. 2 step 5). The supervisor re-invokes
+the ORCHESTRATOR with the manifest Attachments `-f` set appended; the
 orchestrator re-reads the manifest for the rest.
 
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
@@ -328,16 +331,15 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 - [ ] REQ-01 <requirement> -- verify: <command/file check> -- status: pending
 - [ ] REQ-02 <requirement> -- verify: <command/file check> -- status: dispatched
 ## Attachments
-- Attachments: none (or one ORIGINAL absolute path per line below, in received order)
-- <abs path 1>
-- <abs path 2>
-- NOTE: paths are ORIGINAL absolute paths (no copies into the goal dir); a moved or deleted file breaks a later re-fire (see sec. 2 step 5).
+- Attachments: none (or one SAVED repo-relative path + sha256 per line below, in saved order)
+- <goaldir>/attachments/<name> sha256:<hex>
+- NOTE: saved copies only - sessions retain attachment BASENAMES only, so original paths are unrecoverable.
 ## DAG
 - REQ-01: no deps
 - REQ-02: after REQ-01
 ## Runs
 ### REQ-02
-- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" files: <none | abs paths in dispatch order> re-fires: <n>/3 retries: <m>/3
+- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" re-fires: <n>/3 retries: <m>/3
 - run1: <date> pushed: <sha or FAIL> | report: <ok or FAIL-missing> | acceptance: <ok or FAIL-which-item>
 - retry1: <date> transient: <rate-limit | conn-reset | 5xx-timeout | restart-signature> waited: <2min> | retries: 1/3
 - re-fire1: <date> result: <ok or FAIL-which-check> | re-fires: 1/3 | retries: <m>/3
@@ -349,7 +351,7 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 
 Rules:
 
-- Save every worker prompt file + order text + `files:` `-f` set under the goal dir
+- Save every worker prompt file + order text under the goal dir
   (`.opencode/goal-loop/<slug>/prompts/`, e.g.
   `prompts/REQ-01.<code>.md` plus the order string in the Runs record)
   so a re-fire is byte-identical: never rely on $TEMP copies after a
@@ -377,14 +379,13 @@ Rules:
   separate and never interchangeable. A 4th fire or a 4th wait is never
   allowed (see step 5 for the `blocked` / `blocked-transient` wrap-ups,
   still with the `Landed:` line).
-- Attachments rule: the Attachments block holds ORIGINAL absolute paths
-  in received order (`Attachments: none` when empty); each dispatch Runs
-  line carries `files:` with the exact `-f` set in dispatch order.
-  Re-fires and sec. 8 RESUME reproduce it byte-identical (a missing file
-  is evidence per sec. 2 step 5, never silent). Attached paths join the
-  worker editable scope for that dispatch only (sec. 3); branch-only
-  still holds. The supervisor re-invokes the ORCHESTRATOR with the
-  manifest Attachments `-f` set appended.
+- Attachments rule (orch-side only, user order 2026-10-15): the
+  Attachments block holds SAVED repo-relative paths + sha256 in saved
+  order (`Attachments: none` when empty). Workers receive NO attachments:
+  no attachment flags on worker dispatches, no attachment field in Runs,
+  no worker-side attachment access. The supervisor re-invokes the
+  ORCHESTRATOR with the manifest Attachments `-f` set appended
+  (sec. 4, unchanged).
 
 ## 6. Report
 
@@ -522,10 +523,10 @@ before any new dispatch:
      commit AND push the goal branch on each mark.
    - Branch absent, or present with no pushed commits: re-fire the saved
      prompt file verbatim (`prompts/REQ-0<code>.md` + the recorded order
-     text, byte-identical, no edits) with the identical recorded `files:`
-     `-f` set per sec. 4 (never drop a missing `-f`; a missing file is
-     evidence per sec. 2 step 5, never silent). Record the new run in Runs, commit
-     AND push the goal branch, then dispatch foreground per sec. 4.
+     text, byte-identical, no edits) per sec. 4 (a missing saved copy is
+     evidence per sec. 2 step 5, never silent). Record the new run in
+     Runs, commit AND push the goal branch, then dispatch foreground per
+     sec. 4.
      The sec. 2 step 5 budgets carry over: keep counting the recorded
      `re-fires: <n>/3` and `retries: <m>/3`, max 3 re-fires per REQ and
      max 3 transient retries per run, never a 4th fire and never a 4th wait.
