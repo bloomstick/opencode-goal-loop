@@ -1,4 +1,4 @@
-# Invoke-GoalSupervisor.ps1 — EXPERIMENTAL external goal watchdog (GOALAUTO).
+# Invoke-GoalSupervisor.ps1 - EXPERIMENTAL external goal watchdog (GOALAUTO).
 #
 # Runs as a Windows Scheduled Task OUTSIDE the OpenCode server (that is the
 # whole point: a server-held watcher dies in the restart it should fix, and

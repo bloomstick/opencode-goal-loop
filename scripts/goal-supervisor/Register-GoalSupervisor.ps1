@@ -1,4 +1,4 @@
-# Register-GoalSupervisor.ps1 — EXPERIMENTAL (GOALAUTO). Registers the
+# Register-GoalSupervisor.ps1 - EXPERIMENTAL (GOALAUTO). Registers the
 # external supervisor as a Windows Scheduled Task running OUTSIDE OpenCode.
 #
 # Defaults ship DISABLED: registration alone starts nothing. Enable only
