@@ -47,6 +47,11 @@ foreach ($S in (Get-ChildItem (Join-Path $SourceDir "skills") -Directory)) {
   Copy-Item (Join-Path $S.FullName "*") $Dst -Recurse -Force
 }
 
+$SupervisorDir = (Join-Path $env:USERPROFILE ".config/opencode/goal-supervisor")
+New-Item -ItemType Directory -Force $SupervisorDir | Out-Null
+Copy-Item (Join-Path $SourceDir "scripts/goal-supervisor/*") $SupervisorDir -Force
+Write-Output ("SUPERVISOR: deployed scripts -> {0}" -f $SupervisorDir)
+
 $OrdersSrc = (Join-Path $SourceDir "standing-orders.md")
 $OrdersDst = (Join-Path $env:USERPROFILE ".config/opencode/standing-orders.md")
 if (Test-Path $OrdersSrc -PathType Leaf) {
