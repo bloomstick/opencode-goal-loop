@@ -9,6 +9,9 @@
   harness sec. 6 defaults line now 1 min / 2 h. Worst-case
   stop-to-refire drops from the old ~20-minute bound to ~4 min. GAP threshold logic
   unchanged (3x interval): with 1-min ticks a missed-run gap trips at 3 min.
+   Alignment (REQ-02, 2026-10-14): Register forwards `-IntervalMinutes` in the
+   task Arguments and Invoke `-IntervalMinutes` default is now 1, so one number
+   governs ticks and the 3 min GAP threshold end to end.
 
 - `goal-supervisor`: live-fire e2e in contained fixture (REQ-02 GS2,
   2026-10-14): Temp repo `e2e-live` + local bare origin, one-goal

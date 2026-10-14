@@ -129,7 +129,7 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
 ### Collector behavior (REQ-02 boot-gap crash collector)
 
 - `lastCheckUtc` in `supervisor-state.json` is updated on EVERY run,
-  including every NOOP. `-IntervalMinutes` (default 5, same default the
+  including every NOOP. `-IntervalMinutes` (default 1, same default the
   Register script uses) sets the expected cadence.
 - GAP stub: when now minus `lastCheckUtc` exceeds 3x the interval, the
   supervisor appends one `GAP slug=... lastCheck=... gapMin=...
