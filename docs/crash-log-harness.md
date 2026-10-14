@@ -154,3 +154,46 @@ OpenCode as a Windows Scheduled Task and only reads git + manifest.
   verdict (TRANSIENT / restart / unknown). The stubs start the paper
   trail; the human finishes it. No autonomy beyond the existing bounded
   re-fire; sec. 0 ban stands.
+
+### Live-fire e2e (REQ-02 GS2, 2026-10-14, contained fixture)
+
+- Fixture (all Temp, removed after): repo
+  `C:\Users\frnd\AppData\Local\Temp\opencode\e2e-live` (branch main) +
+  local bare origin
+  `C:\Users\frnd\AppData\Local\Temp\opencode\e2e-origin.git` wired as
+  its `origin`. One-goal manifest
+  `.opencode/goal-loop/probelive/reqs-manifest.md` with a single REQ-01
+  `dispatched` + Runs record (branch `feat/probe-w1`, prompt
+  `prompts/REQ-01.PROBE.md`, order "Run REQ-01 probe for probelive")
+  and a self-contained probe prompt (no skill loading: marker file
+  `probe-ok.txt` with fixed content, add + commit on the worker branch,
+  push branch to origin, four-line GA-probe report block last).
+  Manifest commit backdated -20 min + mtime aged -20 min + state
+  `lastAttemptUtc` epoch, so the first tick STALLs.
+- Box: task `goal-supervisor-probelive` registered via
+  `Register-GoalSupervisor.ps1 -Enable -IntervalMinutes 1 -BoxHours 1`
+  (`-WorkingDirectory` default = RepoRoot), every 1 min inside a 1 h box
+  (box end 2026-10-14T22:54 local; unregistered early after DONE). One-off deviation, experiment only:
+  `ExecutionTimeLimit` tightened PT1H -> PT15M on the task.
+- Chain observed (fixture `supervisor.log`, quoted):
+  `2026-10-14T18:55:44.1178786Z supervisor STALL slug=probelive reqs=REQ-01:dispatched idleMin=21.2 attempt=1/3`
+  `2026-10-14T18:57:47.5573422Z supervisor REFIRE exit=0 reqs=REQ-01:dispatched`
+  The re-fired orchestrator (global skill) ran a full RESUME: worker
+  landed the marker (`probe-ok.txt` content quoted:
+  `PROBE-OK probelive 2026-10-14`) + branch on the LOCAL origin
+  (`git ls-remote` quoted:
+  `2c58ae12c6d0c7514d4d62722ba2dd63f674e16b refs/heads/feat/probe-w1`
+  `65ba0c7d90879fc9477911c0cd6458bca97d389e refs/heads/main`),
+  then DONE on fixture main (manifest quoted:
+  `- [x] REQ-01 self-contained probe lands marker + branch -- verify: probe-ok.txt content + git ls-remote origin feat/probe-w1 -- status: done`;
+  fixture main tip quoted:
+  `65ba0c7 goal(probelive): REQ-01 done merged f5290f4 green`).
+  Post-DONE ticks quiet (quoted):
+  `2026-10-14T18:58:45.0783457Z supervisor NOOP slug=probelive reason=nothing-actionable`
+  (repeated 18:59:45Z). No GAP/SERVER-DOWN stubs fired.
+- Cleanup verified: `Unregister-ScheduledTask
+  -TaskName goal-supervisor-probelive` + `Get-ScheduledTask` shows
+  nothing matching (quoted: `ABSENT: no scheduled task matches
+  goal-supervisor/probe`); `Test-Path` on both fixture dirs False/False
+  (removed). Total observation ~5 min of the 25 min bound; zero product
+  impact (fixture + bare origin were Temp scratch, never landed).
