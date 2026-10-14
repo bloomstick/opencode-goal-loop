@@ -61,6 +61,7 @@ mid-backoff resumes ONLY via skill sec. 8 RESUME. The loop
 ALWAYS ends as DONE or explicit `blocked` / `blocked-transient`, never silent, never infinite.
 A `blocked` or `blocked-transient` REQ resumes as-is unless the user re-opens it.
 Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never re-fired or integrated by dispatch, RESUME, or the supervisor -- only the human answer clears it back to dispatched.
+ATTACHMENTS: record `/goal` user files as ORIGINAL absolute paths in the manifest Attachments block and forward each as a repeat `-f` after `-f <prompt-file>` in manifest order with the exact `files:` set on every (re-)fire per skill sec. 2/4/5.
 
 STANDING-ORDERS duties: at loop start (after clarify/resume) read
 standing orders (global config copy, else the repo template) and never

@@ -99,7 +99,14 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    clarify/resume, read standing orders (global config copy deployed
    by `Install-GoalLoop.ps1`, falling back to the repo
    `standing-orders.md` template) and never gate on a listed power
-   again; anything outside the list still asks.
+   again; anything outside the list still asks. Attachments (REQ-01a):
+   when the `/goal` invocation carries user-attached files, record each
+   as an ORIGINAL absolute path in the manifest Attachments block
+   (sec. 5), one per line, in the order received, before any dispatch;
+   an empty set records `Attachments: none` (no copies into the goal
+   dir). Caveat: a moved or deleted file breaks a later re-fire; the
+   Runs record carries the exact `-f` set so a re-fire is byte-identical,
+   and a missing file at re-fire time is evidence per step 5, never silent.
 2. **Manifest.** Write `reqs-manifest.md` (see sec. 5) under
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
    chat memory, is the acceptance record and the resumable state for
@@ -120,7 +127,14 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    Write an eight-part worker prompt file (see sec. 3) saved under
    `prompts/` (see sec. 5), record the run in the manifest, commit AND
    push the goal branch, then run it foreground and collect
-   the report block.
+   the report block. Forward attachments (REQ-01b): append one `-f` per
+   manifest Attachments path AFTER `-f <prompt-file>`, in manifest order:
+   `opencode run --auto --agent goal-worker -f <prompt-file> [-f <attachment>...] "<order>"`
+   (sec. 4). Record the exact set in the Runs record `files:` list
+   (sec. 5); an empty set records `files: none` and dispatches with
+   `-f <prompt-file>` only. Every re-fire reproduces the identical `-f`
+   set byte-identical with no edits; a missing file at re-fire time is
+   evidence per step 5, never silent (never drop the `-f`).
    Tiny-task fast path (user order 2026-10-14: save tokens/time on
    trivial actions): the orchestrator MAY execute a requirement inline
    with NO worker iff ALL hold: touches at most 2 files of substantive
@@ -151,7 +165,7 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    A TRANSIENT failure triggers bounded backoff INSIDE the turn: print
    one progress line per wait (so the turn never looks dead), wait, then
    re-dispatch the identical run (same saved prompt file + same recorded
-   order text verbatim, counts as the SAME attempt, consumes ZERO
+   order text verbatim + same recorded `files:` `-f` set, counts as the SAME attempt, consumes ZERO
    re-fire budget). Max 3 transient retries per run with growing waits
    (2 min, then 5 min, then 10 min); waits are fixed sleeps announced up
    front, never condition polling, never schedules except the GOALAUTO
@@ -168,7 +182,7 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    + worker branches), never by new autonomy except the GOALAUTO
    external supervisor per sec. 0.
    On a WORK failure (completed run, any check failing), re-fire the SAME saved prompt file + the SAME
-   recorded order text verbatim (byte-identical, no edits), foreground
+   recorded order text verbatim + the SAME recorded `files:` `-f` set (byte-identical, no edits), foreground
    per sec. 4. Budget: max 3 re-fires per REQ (1 initial run + up to 3
    re-fires = at most 4 runs per REQ), counted in the manifest Runs
    record as `re-fires: <n>/3` alongside `retries: <n>/3` (sec. 5, separate
@@ -181,6 +195,11 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
    (verify + land whatever passed per sec. 7, report `blocked` per
    sec. 6). Re-fire is per-REQ pre-integration only: it never re-fires
    a `done` or `awaiting-input` REQ and never bypasses the sec. 7 LAND proof.
+   Missing attachment at (re-)fire time is evidence, never silent: when a
+   dispatch cannot launch because an `-f` path is gone, classify per this
+   step (TRANSIENT while the dispatch died before a verifiable report was
+   possible, else WORK failure feeding the re-fire budget) and record
+   which path was missing with the last output.
 6. **Integrate sequentially.** Merge one worker at a time onto
    local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
    feeds recovered branches here), resolving conflicts,
@@ -228,7 +247,8 @@ stop; the human answer clears it per sec. 5; nothing runs unattended).
 
 Write to a saved prompt file under the goal dir (never $TEMP only),
 e.g. `.opencode/goal-loop/<slug>/prompts/REQ-01.<code>.md`. The saved
-file plus the recorded order text is the byte-identical re-fire source
+file plus the recorded order text plus the recorded `files:` `-f` set is
+the byte-identical re-fire source
 for sec. 8 RESUME; record its path in the manifest Runs record (sec. 5)
 before dispatch:
 
@@ -237,8 +257,15 @@ before dispatch:
 2. **Context:** what exists, why this task, what is out of scope (name the
    other workers/requirements).
 3. **Scope:** allowed files ONLY (new file or explicit list) + numbered
-   requirements + verification path per requirement.
-4. **Forbidden:** branch-only, no main push, no other files, no new deps,
+   requirements + verification path per requirement. Attachments
+   (REQ-01c): user-attached files arrive as message attachments AND are
+   editable inputs for that dispatch, including outside-the-repo paths;
+   they join the worker editable scope for that dispatch only, while the
+   allowed-files list still governs everything else. Branch-only still
+   holds (workers never push `main`).
+4. **Forbidden:** branch-only, no main push, no other files (except the
+   dispatched Attachments `-f` set, editable for that dispatch per Scope
+   item 3), no new deps,
    no schedules/services/watchers/polling (workers NEVER arm the
    GOALAUTO supervisor; arm/disarm is orchestrator-only per sec. 0),
    no other repos, no `task`
@@ -274,13 +301,21 @@ Keep prompts precise — workers get no other context.
 Generic (any repo), one foreground call per worker batch, large timeout:
 
 ```powershell
-opencode run --auto --agent goal-worker -f <prompt-file> "<order>"
+opencode run --auto --agent goal-worker -f <prompt-file> [-f <attachment>...] "<order>"
 ```
 
 <prompt-file> is the saved file under
 `.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
 <order> must match the manifest Runs record verbatim so a re-fire is
-byte-identical.
+byte-identical. Each <attachment> is one manifest Attachments absolute
+path, appended AFTER `-f <prompt-file>` in manifest order (REQ-01b);
+with no attachments dispatch with `-f <prompt-file>` only. The Runs
+record `files:` list carries the exact `-f` set (sec. 5); every re-fire
+reproduces it byte-identical with no edits, and a missing file at
+re-fire time is evidence per sec. 2 step 5, never silent. `-f` is
+repeatable per `opencode run --help` (`File(s) to attach to message`).
+The supervisor re-invokes the ORCHESTRATOR, which re-reads the manifest,
+so no supervisor change is needed.
 
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
 `opencode run` as a foreground process so the server never holds background
@@ -318,12 +353,17 @@ silently converted to `awaiting-input` and vice versa.
 Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 - [ ] REQ-01 <requirement> -- verify: <command/file check> -- status: pending
 - [ ] REQ-02 <requirement> -- verify: <command/file check> -- status: dispatched
+## Attachments
+- Attachments: none (or one ORIGINAL absolute path per line below, in received order)
+- <abs path 1>
+- <abs path 2>
+- NOTE: paths are ORIGINAL absolute paths (no copies into the goal dir); a moved or deleted file breaks a later re-fire (see sec. 2 step 5).
 ## DAG
 - REQ-01: no deps
 - REQ-02: after REQ-01
 ## Runs
 ### REQ-02
-- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" re-fires: <n>/3 retries: <m>/3
+- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" files: <none | abs paths in dispatch order> re-fires: <n>/3 retries: <m>/3
 - run1: <date> pushed: <sha or FAIL> | report: <ok or FAIL-missing> | acceptance: <ok or FAIL-which-item>
 - retry1: <date> transient: <rate-limit | conn-reset | 5xx-timeout | restart-signature> waited: <2min> | retries: 1/3
 - re-fire1: <date> result: <ok or FAIL-which-check> | re-fires: 1/3 | retries: <m>/3
@@ -335,7 +375,7 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 
 Rules:
 
-- Save every worker prompt file + order text under the goal dir
+- Save every worker prompt file + order text + `files:` `-f` set under the goal dir
   (`.opencode/goal-loop/<slug>/prompts/`, e.g.
   `prompts/REQ-01.<code>.md` plus the order string in the Runs record)
   so a re-fire is byte-identical: never rely on $TEMP copies after a
@@ -368,6 +408,17 @@ Rules:
   budget exhausted means `blocked` + wrap-up, transient retries
   exhausted means `blocked-transient` + wrap-up (both still land
   whatever passed and report per sec. 6 with the `Landed:` line).
+- Attachments rule (REQ-01): the Attachments block holds ORIGINAL absolute
+  paths in received order (`Attachments: none` when empty); each dispatch
+  Runs line carries `files:` with the exact `-f` set in dispatch order.
+  Re-fires and sec. 8 RESUME reproduce the identical `-f` set
+  byte-identical with no edits and unchanged budgets (never drop a
+  missing `-f`; a missing file is evidence per sec. 2 step 5, never
+  silent). Attached paths join the worker editable scope for that
+  dispatch only, including outside-the-repo paths; the allowed-files list
+  still governs everything else and branch-only still holds (workers never
+  push `main`). The supervisor re-invokes the ORCHESTRATOR, which re-reads
+  the manifest, so no supervisor change is needed.
 
 ## 6. Report
 
@@ -506,7 +557,9 @@ before any new dispatch:
      commit AND push the goal branch on each mark.
    - Branch absent, or present with no pushed commits: re-fire the saved
      prompt file verbatim (`prompts/REQ-0<code>.md` + the recorded order
-     text, byte-identical, no edits). Record the new run in Runs, commit
+     text, byte-identical, no edits) with the identical recorded `files:`
+     `-f` set per sec. 4 (never drop a missing `-f`; a missing file is
+     evidence per sec. 2 step 5, never silent). Record the new run in Runs, commit
      AND push the goal branch, then dispatch foreground per sec. 4.
      The sec. 2 step 5 budgets carry over: keep counting the recorded
      `re-fires: <n>/3` and `retries: <m>/3`, max 3 re-fires per REQ and
