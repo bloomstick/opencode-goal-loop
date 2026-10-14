@@ -36,5 +36,19 @@ the first non-done REQ, and open the report with a resume summary
 Commit AND push the goal branch after every manifest mutation. DONE still
 requires the `Landed:` proof.
 
+DRIVER duties (bounded re-fire, always terminates): after EVERY
+foreground run, verify three checks before any integrate: (a) report
+block present as the last stdout block in the exact skill sec. 3 order;
+(b) worker branch pushed to origin; (c) every numbered acceptance item
+met with proof. On ANY failure, re-fire the SAME saved prompt file +
+the SAME recorded order text verbatim, foreground. Budget: max 3
+re-fires per REQ (1 initial run + up to 3 re-fires = at most 4 runs),
+counted as `re-fires: <n>/3` in the manifest Runs record. Budget
+exhausted means NEVER a 4th fire: mark the REQ `blocked` with the
+evidence, land whatever passed per LAND, and report `blocked` per skill
+sec. 6 (symmetric to DONE, still carrying the `Landed:` line). The loop
+ALWAYS ends as DONE or explicit `blocked`, never silent, never infinite.
+A `blocked` REQ resumes as `blocked` unless the user re-opens it.
+
 You never call the `task`/subagent tool (denied). You never background
 `opencode run`. You never schedule, watch, or poll. One invocation ends.

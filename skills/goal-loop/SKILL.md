@@ -43,11 +43,20 @@ work runs as foreground `opencode run` processes, never as subagents.
 
 ## 2. Orchestrator loop (goal-orch, primary agent)
 
+Termination guarantee: every `/goal` invocation ends in the same
+invocation as DONE (all REQs `done` + sec. 7 proof) or explicit
+`blocked` (sec. 6 blocked report). No silent stop, no infinite loop:
+at most 1 initial run + 3 re-fires = 4 runs per REQ, then the REQ is
+`blocked` + wrap-up. The three terminal paths are: (a) all-done,
+(b) blocked-on-budget, (c) restart-mid-loop via sec. 8 RESUME (state
+survives on the goal branch + worker branches, loop continues to DONE
+or blocked on the next human turn; nothing runs unattended).
+
 1. **Clarify / Resume.** If a manifest already exists for the goal
    (`.opencode/goal-loop/<slug>/reqs-manifest.md` - including the first
    message after a restart, where the user says "continue" or re-runs
    `/goal`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
-   and continue from the first non-done REQ. Only clarify a fresh goal
+   and continue from the first non-done, non-blocked REQ. Only clarify a fresh goal
    with no manifest. Do not code yet. Propose atomic requirements
    (best guess, not open-ended questions). User confirms or picks
    `recommend` for all.
@@ -62,27 +71,51 @@ work runs as foreground `opencode run` processes, never as subagents.
    `origin/main` tip so stale bases cannot strand work. One worktree +
    branch per worker (see sec. 4). Branch-per-worker stays mandatory even though
    the solo flow uses no PRs (isolation + remote backup before merge).
-   Write a six-part worker prompt file (see sec. 3) saved under
+   Write an eight-part worker prompt file (see sec. 3) saved under
    `prompts/` (see sec. 5), record the run in the manifest, commit AND
    push the goal branch, then run it foreground and collect
    the report block.
-5. **Integrate sequentially.** Merge one worker at a time onto
+5. **Verify-after-every-run (bounded driver).** After EVERY foreground
+   run, before any integrate, verify three checks: (a) report block
+   present as the last stdout block in the exact sec. 3 order;
+   (b) worker branch pushed to origin (tip visible via
+   `git ls-remote origin <worker-branch>`); (c) every numbered
+   acceptance item met with proof (commands + outputs, files checked).
+   On ANY check failing, re-fire the SAME saved prompt file + the SAME
+   recorded order text verbatim (byte-identical, no edits), foreground
+   per sec. 4. Budget: max 3 re-fires per REQ (1 initial run + up to 3
+   re-fires = at most 4 runs per REQ), counted in the manifest Runs
+   record as `re-fires: <n>/3` (sec. 5). Each re-fire appends a
+   `re-fire<N>:` line, commits AND pushes the goal branch, then
+   dispatches. When the budget is exhausted (3 re-fires used and the
+   run still fails), NEVER fire a 4th time: mark the REQ `blocked`
+   with the evidence (which check failed + last outputs), commit AND
+   push the goal branch, stop dispatching that REQ, and go to wrap-up
+   (verify + land whatever passed per sec. 7, report `blocked` per
+   sec. 6). Re-fire is per-REQ pre-integration only: it never re-fires
+   a `done` REQ and never bypasses the sec. 7 LAND proof.
+6. **Integrate sequentially.** Merge one worker at a time onto
    local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
    feeds recovered branches here), resolving conflicts,
    re-running the named green suite after each. Fix cross-worker seams
-   yourself.
-6. **Verify.** Full manifest acceptance: every requirement checked against
+   yourself. Only integrate runs that passed step 5; `blocked` REQs
+   are skipped (their landed siblings still land).
+7. **Verify.** Full manifest acceptance: every requirement checked against
    its verification path (commands run + outputs, files checked). Frontend
    work adds an end-to-end pass with screenshots where available.
-7. **Land (§7).** `push main`, then prove: `git ls-remote origin main` SHA
+8. **Land (sec. 7).** `push main`, then prove: `git ls-remote origin main` SHA
    equals local `main` AND every worker commit is contained in
    `origin/main` (`git branch -r --contains <sha>`; fail loudly
-   otherwise — that is never DONE). Remove TEMP worktrees.
-8. **Report.** Implementation report + what remains + next concrete step,
-   with the §6 `Landed:` proof line. No `Landed:` proof, no DONE. Wait
-   for the next task. Nothing keeps running after DONE.
+   otherwise - that is never DONE). Remove TEMP worktrees. A
+   blocked loop still lands whatever passed and proves it the same way.
+9. **Report.** Implementation report + what remains + next concrete step,
+   with the sec. 6 `Landed:` proof line. DONE uses the DONE shape;
+   a budget-exhausted loop uses the sec. 6 `blocked` shape (symmetric,
+   still carrying the `Landed:` line for whatever did land). No
+   `Landed:` proof, no DONE and no `blocked`. Wait
+   for the next task. Nothing keeps running after DONE or `blocked`.
 
-## 3. Worker prompt file (six parts, in order)
+## 3. Worker prompt file (eight parts, in order)
 
 Write to a saved prompt file under the goal dir (never $TEMP only),
 e.g. `.opencode/goal-loop/<slug>/prompts/REQ-01.<code>.md`. The saved
@@ -114,6 +147,14 @@ before dispatch:
    Caveats: <none or list>
    ```
    Commit on worker branch, push branch ONLY, stop every child process.
+8. **Never-yield:** never claim DONE, `blocked`, or any report before
+   EVERY numbered acceptance item is met with proof (command output
+   or file check per item, quoted in the report). A turn that
+   produces no progress is not completion: keep working, or state
+   the concrete blocker (which item, what was tried, last output).
+   The sec. 3 report block goes last in stdout or the run counts as
+   failed and will be re-fired per sec. 2 step 5 (max 3 re-fires per
+   REQ, then the orchestrator marks the REQ `blocked`).
 
 Keep prompts precise — workers get no other context.
 
@@ -146,8 +187,10 @@ restart lives in the manifest + git, not in chat memory. Workers never
 edit the manifest directly; they report, the orchestrator records.
 
 Per-REQ status is explicit: `pending` (never dispatched), `dispatched`
-(branch in flight, Runs record below), `done` (pushed proof integrated).
-Checkbox mirrors status: `- [ ]` for pending/dispatched, `- [x]` for done.
+(branch in flight, Runs record below), `done` (pushed proof integrated),
+`blocked` (re-fire budget exhausted, evidence recorded, wrap-up done).
+Checkbox mirrors status: `- [ ]` for pending/dispatched/blocked,
+`- [x]` for done only. A `blocked` REQ is never marked done.
 
 ```markdown
 # Goal: <one-line objective>
@@ -159,7 +202,10 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 - REQ-02: after REQ-01
 ## Runs
 ### REQ-02
-- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>"
+- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" re-fires: <n>/3
+- run1: <date> pushed: <sha or FAIL> | report: <ok or FAIL-missing> | acceptance: <ok or FAIL-which-item>
+- re-fire1: <date> result: <ok or FAIL-which-check> | re-fires: 1/3
+- re-fire2: <date> result: <ok or FAIL-which-check> | re-fires: 2/3
 - pushed: <sha or none-yet> (<date>) | report-tail: <last report lines>
 ## Log
 - <date> REQ-01 done by <branch> -- <proof>
@@ -180,7 +226,15 @@ Rules:
 - Invariant (no-redo): re-running any completed step is a bug. Presence
   of pushed proof moves a REQ forward, never backward. A REQ marked
   `done` is never re-fired; a `dispatched` REQ with pushed commits on
-  origin is integrated, not redone (see sec. 8 RESUME).
+  origin is integrated, not redone (see sec. 8 RESUME). A REQ marked
+  `blocked` is never re-fired unless the user explicitly re-opens it
+  (re-open resets `blocked` to `dispatched` with a new Runs entry and
+  a fresh 3 re-fire budget, recorded as `re-open: <date> reason`).
+- Budget accounting: every sec. 2 step 5 verify + re-fire updates the
+  Runs record (`run<N>` / `re-fire<N>` lines + `re-fires: <n>/3`),
+  then commits AND pushes the goal branch. Cap is numeric and fixed:
+  3 re-fires per REQ in sec. 2, sec. 5, and sec. 6 alike. A 4th fire
+  is never allowed; budget exhausted means `blocked` + wrap-up.
 
 ## 6. Report
 
@@ -207,6 +261,21 @@ state (pushed vs. pending owner). No `Landed:` proof, no DONE.
 Landed: origin/main <sha> (local==remote: <sha>) | tags: <none pushed | pending owner>
 ```
 
+A budget-exhausted loop never ends silent: it reports `blocked` with a
+shape symmetric to DONE, still carrying the `Landed:` line for whatever
+did land (cap stays 3 re-fires per REQ, same as sec. 2 and sec. 5).
+Stdout MUST end with this block last:
+
+```
+<CODE> -- <title> (blocked)
+Added: <files that did land>
+SLOC: <+/-> 
+Tests/proofs: <commands + outputs + re-fire evidence: runs used <k>/4, re-fires <n>/3, last failure>
+Blocked: <REQ-xx> <reason: missing-report | branch-unpushed | acceptance-unmet> -- <evidence + last output>
+Landed: origin/main <sha> (local==remote: <sha>) | tags: <none pushed | pending owner>
+Caveats: <blocker + concrete step to re-open>
+```
+
 ## 7. LAND phase (solo flow: merge locally, push, prove — no PRs)
 
 No PRs on the solo flow: there is no branch protection and no PR CI to
@@ -214,7 +283,7 @@ gate on, so PRs are pure roundtrips where finished work rots. The loop
 closes itself in the same invocation. Branch-per-worker is still
 mandatory (isolation + remote backup before merge).
 
-1. Workers pushed their branches (worker protocol, §3 step 7). Fetch
+1. Workers pushed their branches (worker protocol, sec. 3 steps 7-8). Fetch
    first so the merge base is the live tip:
    `git fetch origin`.
 2. Merge each worker branch into local `main` with `git merge --no-ff`,
@@ -231,10 +300,13 @@ mandatory (isolation + remote backup before merge).
    - Fail loudly otherwise — an unproven push is never DONE.
 5. Remove TEMP worktrees (`git worktree remove <path>`). Keep branches
    as remote backup until the report is accepted.
-6. DONE, with the sec. 6 `Landed:` line in the report.
+6. DONE, with the sec. 6 `Landed:` line in the report. A
+   budget-exhausted loop lands whatever passed the sec. 2 step 5
+   checks the same way and reports `blocked` per sec. 6 (still with
+   the `Landed:` proof for what did land).
 
 Sec. 8 RESUME feeds recovered branches into steps 1-2 above; the landing
-proof is unchanged and still required for DONE.
+proof is unchanged and still required for DONE and for `blocked`.
 
 ## 8. RESUME phase (crash-safe continuation, attended only)
 
@@ -244,7 +316,8 @@ worker commits are pushed on worker branches. RESUME rebuilds session
 state from disk + remote; it adds no schedules, services, watchers,
 polling loops, idle hooks, retries, or background work. It runs only on
 a human goal turn ("continue" or a re-run of `/goal`) when a manifest
-exists. One invocation still ends at DONE or at the next human turn;
+exists. One invocation still ends at DONE or `blocked`, or at the next
+human turn after a resume that still has work in flight;
 nothing keeps running after that (see sec. 0 hard rules).
 
 On ANY goal turn with an existing manifest, the orchestrator MUST,
@@ -253,7 +326,9 @@ before any new dispatch:
 1. Read `.opencode/goal-loop/<slug>/reqs-manifest.md` (this file, not
    chat memory, is the truth). Run `git fetch origin` so reconciliation
    sees the live remote.
-2. Reconcile each non-done REQ against git:
+2. Reconcile each non-done REQ against git (a `done` REQ is never
+   re-fired; a `blocked` REQ resumes as `blocked` unless the user
+   explicitly re-opens it per sec. 5, never silently re-fired):
    - Branch with pushed commits on origin (branch exists AND its tip or
      recorded SHA is visible on origin): treat it as survived work.
      Verify the branch state (report tail + branch diff), then integrate
@@ -264,8 +339,11 @@ before any new dispatch:
      prompt file verbatim (`prompts/REQ-0<code>.md` + the recorded order
      text, byte-identical, no edits). Record the new run in Runs, commit
      AND push the goal branch, then dispatch foreground per sec. 4.
-3. Continue the loop from the first non-done REQ (sec. 2 steps 4-8):
-   dispatch what has no branch, integrate what survived, verify, land.
+     The sec. 2 step 5 budget carries over: keep counting the recorded
+     `re-fires: <n>/3`, max 3 re-fires per REQ, never a 4th fire.
+3. Continue the loop from the first non-done, non-blocked REQ
+   (sec. 2 steps 4-9): dispatch what has no branch, integrate what
+   survived, verify-after-every-run per sec. 2 step 5, verify, land.
 4. Report a resume summary first (see sec. 6): recovered X from pushed
    proof, re-fired Y, redone: nothing. If anything completed was
    re-executed, fail loudly: name the REQ, what was repeated, and why.
@@ -275,3 +353,8 @@ before any new dispatch:
 Resume flows into LAND normally: DONE still requires the sec. 6
 `Landed:` proof (local `main` == `origin/main` plus every worker commit
 contained in `origin/main`). A resume summary alone is never DONE.
+A loop with a `blocked` REQ still lands whatever passed and reports
+`blocked` per sec. 6 (symmetric to DONE, still with the `Landed:`
+line). The driver re-fire (sec. 2 step 5) is per-REQ pre-integration
+inside one invocation; RESUME never re-fires `done` and never silently
+re-opens `blocked`.
