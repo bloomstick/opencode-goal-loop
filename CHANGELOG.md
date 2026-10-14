@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+- `goal-loop`: attachment forward chain (REQ-01 AF1, 2026-10-15): the
+  old dispatch (`-f <prompt-file>` only) dropped every user attachment;
+  the orchestrator now records `/goal` user files as ORIGINAL absolute
+  paths in the manifest Attachments block (one per line, `none` when
+  empty, no copies) and forwards each as a repeat `-f` AFTER
+  `-f <prompt-file>` in manifest order, with the exact `files:` set in
+  the Runs record reproduced byte-identical on every re-fire and RESUME
+  (a missing file is evidence per sec. 2 step 5, never silent; attached
+  paths are editable for that dispatch, even outside the repo, while the
+  allowed-files list still governs the rest; supervisor path unchanged:
+  it re-invokes the orchestrator, which re-reads the manifest).
+
 - `goal-loop`: tiny-task fast path (user order 2026-10-14): the
   orchestrator MAY execute a requirement inline with no worker iff all
   tiny caps hold (at most 2 allow-listed files, ~30 added lines, no
