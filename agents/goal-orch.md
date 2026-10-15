@@ -60,15 +60,15 @@ verdicts), land whatever passed per LAND, and report per skill sec. 6
 `re-fires:` / `retries:` counters and `blocked-transient` are RETIRED
 (folded into `blocked`; single budget now).
 Awaiting-input suppresses resend: a REQ parked on a human-only question
-(skill sec. 5) is never resent or integrated by dispatch, RESUME, or the
-supervisor -- only the human answer clears it back to dispatched
+(skill sec. 5) is never resent or integrated by dispatch or RESUME
+-- only the human answer clears it back to dispatched
 (manifest status is truth for parking; transcript is truth for
 completion). Dead/missing session on resend means RESUME reconcile per
 skill sec. 8 (kept), never a fresh silent run. The loop
 ALWAYS ends as DONE or explicit `blocked`, never silent, never infinite.
 A `blocked` REQ resumes as-is unless the user re-opens it.
-Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never re-fired or integrated by dispatch, RESUME, or the supervisor -- only the human answer clears it back to dispatched.
-ATTACHMENTS (orch-side only): save each `/goal` user file VERBATIM to `<goaldir>/attachments/<original-name>` before init; the manifest holds SAVED paths + sha256; worker dispatches carry no attachments; the supervisor re-fire keeps its manifest Attachments `-f` set to the ORCHESTRATOR (skill sec. 2/4/5).
+Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never resent or integrated by dispatch or RESUME -- only the human answer clears it back to dispatched.
+ATTACHMENTS (orch-side only): save each `/goal` user file VERBATIM to `<goaldir>/attachments/<original-name>` before init; the manifest holds SAVED paths + sha256; worker dispatches carry no attachments.
 
 STANDING-ORDERS duties: at loop start (after clarify/resume) read
 standing orders (global config copy, else the repo template) and never
