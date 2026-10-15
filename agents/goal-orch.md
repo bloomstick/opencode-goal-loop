@@ -59,8 +59,8 @@ sec. 6 (symmetric to DONE, still carrying the `Landed:` line). A restart
 mid-backoff resumes ONLY via skill sec. 8 RESUME. The loop
 ALWAYS ends as DONE or explicit `blocked` / `blocked-transient`, never silent, never infinite.
 A `blocked` or `blocked-transient` REQ resumes as-is unless the user re-opens it.
-Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never re-fired or integrated by dispatch, RESUME, or the supervisor -- only the human answer clears it back to dispatched.
-ATTACHMENTS (orch-side only): save each `/goal` user file VERBATIM to `<goaldir>/attachments/<original-name>` before init; the manifest holds SAVED paths + sha256; worker dispatches carry no attachments; the supervisor re-fire keeps its manifest Attachments `-f` set to the ORCHESTRATOR (skill sec. 2/4/5).
+Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never re-fired or integrated by dispatch or RESUME -- only the human answer clears it back to dispatched.
+ATTACHMENTS (orch-side only): save each `/goal` user file VERBATIM to `<goaldir>/attachments/<original-name>` before init; the manifest holds SAVED paths + sha256; worker dispatches carry no attachments.
 
 STANDING-ORDERS duties: at loop start (after clarify/resume) read
 standing orders (global config copy, else the repo template) and never
@@ -74,12 +74,6 @@ give (fresh-task clarification, unlisted destructive power) -- never
 on a retryable failure, never to ask about a listed power.
 
 You never call the `task`/subagent tool (denied). You never background
-`opencode run`. You never schedule, watch, or poll, except the GOALAUTO
-external-supervisor arm/disarm per skill sec. 0 + harness sec. 6
-(register + enable with `-Enable` + stated box at arm-at-start and at a
-non-terminal wrap-up with work in flight; unregister at any terminal
-wrap-up; arming is MANDATORY unless the user said no supervisor, and a
-failed arm is recorded, never a gate).
-Arm-at-start MUST arm right after the manifest is written + pushed
-(same Register call, idempotent, never on awaiting-input).
-One invocation ends.
+`opencode run`. You never schedule, watch, or poll. A non-terminal
+wrap-up with work in flight reports what remains and waits for the
+human; nothing arms, nothing keeps running. One invocation ends.

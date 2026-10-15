@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+- `goal-loop`: full supervisor delete (REQ-01, user order 2026-10-15):
+  the GOALAUTO background-autonomy experiment is OVER - it caused real
+  harm (3 PC-killing supervisor pile-ons) and answered a question the
+  user never asked. DELETED outright: `scripts/goal-supervisor/`
+  (Invoke, Register, Get, goal-sup.cmd). STRIPPED: the skill sec. 0
+  GOALAUTO exception block, the arm-at-start rule, the step 9
+  arm/disarm rules, every supervisor mention in steps 5/6/8 (a
+  non-terminal wrap-up with work in flight now reports + waits for the
+  human; nothing arms), the `goal-orch` arm/disarm + supervisor lines,
+  the standing-orders GOALAUTO pointer, the installer supervisor
+  deploy + PATH blocks, and harness secs. 4/6 supervisor sections
+  (replaced with a dated removal pointer; secs. 1-3 log locations +
+  incident protocol kept). History (GOALAUTO dates + why it died) lives
+  in the skill Appendix; past entries below stay as history.
+  Untouched: RESUME, clarify-check + saved-copy attachments,
+  `scripts/goal-init.ps1`, commands Step 0, transient retries, re-fire
+  budgets, blocked/awaiting-input, LAND proof, tiny-task rule. No
+  `goal-supervisor-*` scheduled tasks exist (verified before + after).
+
 - `goal-supervisor` readable status + in-flight verdict (REQ-01,
   2026-10-15): `Invoke-GoalSupervisor.ps1` logs `REFIRE-START slug=<s>
   attempt=<n>/<max> reqs=<list>` immediately before spawning

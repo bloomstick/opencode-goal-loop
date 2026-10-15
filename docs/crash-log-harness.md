@@ -64,173 +64,38 @@ For ANY suspected crash/restart during an experiment, record:
 
 - Time box every automation run; state the box up front.
 - Kill switch: no process outlives its experiment. Server-held
-  background children are banned by sec. 0; an external supervisor
-  (Task Scheduler / OS service, the only design that survives a
-  restart) needs its own stop procedure documented BEFORE it starts.
+  background children are banned by sec. 0.
 - Rollback criteria, evaluated in order: (a) crash with a signature
   matching sec. 2 -> restore prohibition, keep this file as evidence;
   (b) crash inside the OpenCode server binary -> upstream-only, same
   outcome; (c) time box expires crash-free -> propose the next bounded
   step, still no standing autonomy.
 - NOTHING in this file authorizes standing orders beyond the skill:
-  `standing-orders.md` still cannot list anything sec. 0 forbids,
-  except the GOALAUTO skill-sec-0 exception.
-- Arm/disarm protocol (GOALAUTO, skill sec. 0 exception, user order
-  2026-10-14): arm ONLY at a non-terminal wrap-up with actionable
-  non-blocked non-awaiting REQs in flight, via
-  Register-GoalSupervisor.ps1 with `-Enable` and a stated time box
-  (defaults: 1 min interval, 2 h expiry); record task name + box in the
-  manifest Runs/Log + report. Disarm at any terminal wrap-up (DONE /
-  `blocked` / `blocked-transient`) via Unregister-ScheduledTask even if
-  the box has not expired; record + report it. Never arm while any REQ
-  is `awaiting-input` (the supervisor parks as NOOP). Registration
-  alone (Disabled default) starts nothing.
+  `standing-orders.md` still cannot list anything sec. 0 forbids.
 
 ## 5. Kill-switch statement (this change)
 
 No processes started, none running from this work. Two files changed:
 this doc + CHANGELOG entry. Branch only, no tags, no workflow runs.
 
-## 6. External supervisor (GOALAUTO experiment, feat/goal-auto)
+## 6. External supervisor (REMOVED 2026-10-15, REQ-01 full supervisor delete)
 
-Design constraint, read first: a server-held watcher cannot work (dies
-in the restart it should fix; server-held background children are the
-2026-10-12 crash vector). The supervisor therefore lives OUTSIDE
-OpenCode as a Windows Scheduled Task and only reads git + manifest.
+The GOALAUTO supervisor experiment is OVER by user order 2026-10-15:
+it caused real harm (3 PC-killing supervisor pile-ons) and answered a
+question the user never asked. scripts/goal-supervisor/
+(Invoke-GoalSupervisor.ps1, Register-GoalSupervisor.ps1,
+Get-GoalSupervisors.ps1, goal-sup.cmd) is DELETED, as are the installer
+supervisor deploy + PATH blocks and every skill/agent arm/disarm rule.
+A non-terminal wrap-up with work in flight now reports + waits for the
+human; nothing arms, nothing keeps running. Scheduled tasks named
+goal-supervisor-* must not exist (verify with
+Get-ScheduledTask -TaskName goal-supervisor-*).
 
-- Scripts: `scripts/goal-supervisor/Invoke-GoalSupervisor.ps1`
-  (detect + bounded re-fire + own logging + self-disable) and
-  `Register-GoalSupervisor.ps1` (global copy `~/.config/opencode/goal-supervisor/`, else repo
-  `scripts/goal-supervisor/`; registers the
-  task DISABLED by default, 1 min interval, 2 h expiry, 1 h execution
-  cap, IgnoreNew so runs never pile up; worst-case stop-to-refire ~4 min).
-- Stall rule: actionable REQs (pending/dispatched only) + no
-  manifest/branch activity for 3 min + 10 min cooldown + max 3
-  attempts; anything else exits NOOP (quiet is the steady state).
-- Per-goal runtime files (next to the manifest, feed sec. 3 above):
-  `supervisor.log` (every decision line) and `supervisor-state.json`
-  (attempts + last attempt; cap reached self-disables the task).
-- Proofs on landing (synthetic fixture, dry-run): STALL detected with
-  exact re-fire command, COOLDOWN respected, missing manifest NOOP;
-  task registration verified Disabled then removed (zero residue).
-- Enable ONLY against a live goal, inside a stated time box:
-  `Enable-ScheduledTask -TaskName goal-supervisor-<slug>`
-  Stop/remove any time:
-  `Unregister-ScheduledTask -TaskName goal-supervisor-<slug> -Confirm:$false`
-- Arm means register + enable with `-Enable` + stated box at a
-  non-terminal wrap-up with work in flight; disarm means unregister at
-  any terminal wrap-up (DONE / `blocked` / `blocked-transient`) even if
-  the box has not expired. Both are recorded in the manifest Runs/Log
-  and in the report (`Armed:` / `Disarmed:` lines per skill sec. 6).
-- Arm-at-start: same Register call (global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`)
-  MAY arm right after the manifest push, with `-WorkingDirectory` defaulting to the repo root (idempotent).
-  Init runs first via scripts/goal-init.ps1 (commands/goal.md Step 0).
-- Explicit non-goals: no skill/agent/installer edits, sec. 0 ban
-  stands, supervisor never touches server internals, and a crash in
-  the OpenCode binary is upstream-only (rollback per sec. 4).
-
-### Status command (Get-GoalSupervisors)
-
-- One command answers "are my supervisors running":
-  `powershell -NoProfile -File ~/.config/opencode/goal-supervisor/Get-GoalSupervisors.ps1`
-  (repo copy `scripts/goal-supervisor/`; the installer deploy block
-  copies `scripts/goal-supervisor/*`, so it ships globally with zero
-  installer changes). Optional `-Tail <n>` (default 3 log lines per
-  goal) and `-Slug <slug>` (show only that goal). After install
-  (re-run the installer once): `goal-sup [-Tail n] [-Slug name]`
-  works from anywhere in cmd.exe and PowerShell.
-- Per goal it prints: task State / LastRunTime / LastTaskResult /
-  NextRunTime (via Get-ScheduledTaskInfo) + box end (trigger EndBoundary
-  when present); manifest REQ counts by status; supervisor-state.json
-  fields (attempts / lastAttemptUtc / lastCheckUtc); the last `-Tail`
-  supervisor.log lines under an `output:` label.
-- Verdicts (exactly one per goal, first match wins, ranked): STALE (RepoRoot or
-  goal dir gone) / RE-FIRING (log ends in REFIRE-START with no later
-  REFIRE exit= or SERVER-DOWN: a nested recovery run is in flight since
-  the stamp shown, be patient) / RUNNING (supervisor.log fresh within 3x
-  the task tick) / IDLE-DISABLED (task Disabled, log not fresh) / FAILING
-  (LastTaskResult non-zero) / QUIET (log staler than 3x tick: box
-  expiry or sleeping machine). No tasks at all prints
-  `no supervisors registered` and exits 0.
-- Readable display (REQ-01): local times only (`HH:MM` + `N min ago`,
-  never raw UTC, never epoch); result codes translated (`ok` /
-  `never ran` / `failed, code N - see the log tail below`); reasons in
-  words (`active` = workers busy, goal moving; `cooldown` = waiting N
-  min before next retry; `STALL` = quiet X min, re-fired); progress in
-  words (`1 done, 2 in progress, 3 waiting`); box as `expires in Xh Ym
-  (HH:MM local)`; log tail stamps converted to local with age. Raw codes
-  stay in parentheses where cheap; nothing else is dropped.
-- Reads only: task Arguments (-RepoRoot / -Slug / -IntervalMinutes),
-  manifest, state file, log. It changes nothing.
-
-### Collector behavior (REQ-02 boot-gap crash collector)
-
-- `lastCheckUtc` in `supervisor-state.json` is updated on EVERY run,
-  including every NOOP. `-IntervalMinutes` (default 1, same default the
-  Register script uses) sets the expected cadence.
-- GAP stub: when now minus `lastCheckUtc` exceeds 3x the interval, the
-  supervisor appends one `GAP slug=... lastCheck=... gapMin=...
-  thresholdMin=...` line to `supervisor.log` and continues the normal
-  pass. Language is exact: a gap means the supervisor did not run in
-  the window, nothing more. It NEVER claims a crash. First run (epoch
-  or missing `lastCheckUtc`) initializes silently with no stub.
-- SERVER-DOWN stub: when the `opencode run` re-fire fails to launch
-  (catch path) or exits non-zero/null, the supervisor appends one
-  `SERVER-DOWN slug=... exit=... reqs=... attempts=...` line, advances
-  `lastAttemptUtc` so cooldown gates the next retry, and does NOT
-  consume MaxAttempts budget (a down server is not the goal's fault).
-  Consecutive SERVER-DOWNs never self-disable, so recovery stays
-  possible. A clean exit 0 still takes the normal REFIRE path with
-  budget consumed.
-- How the stubs feed sec. 3: each stub carries its UTC timestamp (log
-  line prefix), the affected goal/slug, and a pointer to the server-log
-  window `C:\Users\frnd\.local\share\opencode\log\opencode.log`. Manual
-  follow-up per sec. 3 means: take the stub window, pull the last 20
-  server lines before it plus the first 20 after, count `spawning
-  process` lines in-window, record git-vs-origin state, then file the
-  verdict (TRANSIENT / restart / unknown). The stubs start the paper
-  trail; the human finishes it. No autonomy beyond the existing bounded
-  re-fire; sec. 0 ban stands.
-
-### Live-fire e2e (REQ-02 GS2, 2026-10-14, contained fixture)
-
-- Fixture (all Temp, removed after): repo
-  `C:\Users\frnd\AppData\Local\Temp\opencode\e2e-live` (branch main) +
-  local bare origin
-  `C:\Users\frnd\AppData\Local\Temp\opencode\e2e-origin.git` wired as
-  its `origin`. One-goal manifest
-  `.opencode/goal-loop/probelive/reqs-manifest.md` with a single REQ-01
-  `dispatched` + Runs record (branch `feat/probe-w1`, prompt
-  `prompts/REQ-01.PROBE.md`, order "Run REQ-01 probe for probelive")
-  and a self-contained probe prompt (no skill loading: marker file
-  `probe-ok.txt` with fixed content, add + commit on the worker branch,
-  push branch to origin, four-line GA-probe report block last).
-  Manifest commit backdated -20 min + mtime aged -20 min + state
-  `lastAttemptUtc` epoch, so the first tick STALLs.
-- Box: task `goal-supervisor-probelive` registered via
-  `Register-GoalSupervisor.ps1 -Enable -IntervalMinutes 1 -BoxHours 1`
-  (`-WorkingDirectory` default = RepoRoot), every 1 min inside a 1 h box
-  (box end 2026-10-14T22:54 local; unregistered early after DONE). One-off deviation, experiment only:
-  `ExecutionTimeLimit` tightened PT1H -> PT15M on the task.
-- Chain observed (fixture `supervisor.log`, quoted):
-  `2026-10-14T18:55:44.1178786Z supervisor STALL slug=probelive reqs=REQ-01:dispatched idleMin=21.2 attempt=1/3`
-  `2026-10-14T18:57:47.5573422Z supervisor REFIRE exit=0 reqs=REQ-01:dispatched`
-  The re-fired orchestrator (global skill) ran a full RESUME: worker
-  landed the marker (`probe-ok.txt` content quoted:
-  `PROBE-OK probelive 2026-10-14`) + branch on the LOCAL origin
-  (`git ls-remote` quoted:
-  `2c58ae12c6d0c7514d4d62722ba2dd63f674e16b refs/heads/feat/probe-w1`
-  `65ba0c7d90879fc9477911c0cd6458bca97d389e refs/heads/main`),
-  then DONE on fixture main (manifest quoted:
-  `- [x] REQ-01 self-contained probe lands marker + branch -- verify: probe-ok.txt content + git ls-remote origin feat/probe-w1 -- status: done`;
-  fixture main tip quoted:
-  `65ba0c7 goal(probelive): REQ-01 done merged f5290f4 green`).
-  Post-DONE ticks quiet (quoted):
-  `2026-10-14T18:58:45.0783457Z supervisor NOOP slug=probelive reason=nothing-actionable`
-  (repeated 18:59:45Z). No GAP/SERVER-DOWN stubs fired.
-- Cleanup verified: `Unregister-ScheduledTask
-  -TaskName goal-supervisor-probelive` + `Get-ScheduledTask` shows
-  nothing matching (quoted: `ABSENT: no scheduled task matches
-  goal-supervisor/probe`); `Test-Path` on both fixture dirs False/False
-  (removed). Total observation ~5 min of the 25 min bound; zero product
-  impact (fixture + bare origin were Temp scratch, never landed).
+History (non-normative): the supervisor lived OUTSIDE OpenCode as a
+Windows Scheduled Task named goal-supervisor-<slug> (registered
+DISABLED by default, 1 min interval, 2 h expiry), detected STALLs
+(actionable REQs + 3 min quiet + 10 min cooldown, max 3 attempts), kept
+per-goal supervisor.log + supervisor-state.json, and re-fired the
+orchestrator via foreground opencode run. Past CHANGELOG entries and
+the skill Appendix keep the full story; this section will not grow a
+replacement (the follow-up foreground transcript checker owns that).

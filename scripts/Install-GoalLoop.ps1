@@ -47,29 +47,6 @@ foreach ($S in (Get-ChildItem (Join-Path $SourceDir "skills") -Directory)) {
   Copy-Item (Join-Path $S.FullName "*") $Dst -Recurse -Force
 }
 
-$SupervisorDir = (Join-Path $env:USERPROFILE ".config/opencode/goal-supervisor")
-New-Item -ItemType Directory -Force $SupervisorDir | Out-Null
-Copy-Item (Join-Path $SourceDir "scripts/goal-supervisor/*") $SupervisorDir -Force
-Write-Output ("SUPERVISOR: deployed scripts -> {0}" -f $SupervisorDir)
-
-$SupervisorPathEntry = $SupervisorDir.TrimEnd('\')
-$CurrentUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-if ([string]::IsNullOrEmpty($CurrentUserPath)) { $CurrentUserPath = '' }
-$UserPathParts = @($CurrentUserPath -split ';' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
-$SupervisorOnPath = $false
-foreach ($Part in $UserPathParts) {
-  if ($Part.TrimEnd('\') -ieq $SupervisorPathEntry) { $SupervisorOnPath = $true; break }
-}
-if (-not $SupervisorOnPath) {
-  if ($CurrentUserPath -eq '') { $UpdatedUserPath = $SupervisorDir }
-  else { $UpdatedUserPath = $CurrentUserPath.TrimEnd(';') + ';' + $SupervisorDir }
-  [Environment]::SetEnvironmentVariable('Path', $UpdatedUserPath, 'User')
-  Write-Output ("PATH: added {0} to user PATH" -f $SupervisorDir)
-} else {
-  Write-Output ("PATH: already-listed {0} in user PATH" -f $SupervisorDir)
-}
-Write-Output "NOTE: restart your shell to see the updated PATH (goal-sup)."
-
 $OrdersSrc = (Join-Path $SourceDir "standing-orders.md")
 $OrdersDst = (Join-Path $env:USERPROFILE ".config/opencode/standing-orders.md")
 if (Test-Path $OrdersSrc -PathType Leaf) {
