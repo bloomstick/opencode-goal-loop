@@ -56,8 +56,8 @@ sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
    (`.opencode/goal-loop/<slug>/reqs-manifest.md` - including the first
    message after a restart, where the user says "continue" or re-runs
    `/goal`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
-   and continue from the first non-done, non-blocked, non-awaiting REQ (either
-   `blocked` or `blocked-transient` counts as blocked; `awaiting-input`
+   and continue from the first non-done, non-blocked, non-awaiting REQ
+   (`blocked` counts as blocked; `awaiting-input`
    counts as parked per sec. 5). Only clarify a fresh goal
    with no manifest. Do not code yet. Clarification is ONE round, max 3
    questions: propose atomic requirements (best guess, not open-ended
@@ -169,8 +169,8 @@ sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
    feeds recovered branches here; fan-out runs land here one by one),
    resolving conflicts,
    re-running the named green suite after each. Fix cross-worker seams
-   yourself. Only integrate runs that passed step 5; `blocked`,
-   `blocked-transient`, and `awaiting-input` REQs are skipped (their
+   yourself. Only integrate runs that passed step 5; `blocked`
+   and `awaiting-input` REQs are skipped (their
    landed siblings still land).
 7. **Verify.** Full manifest acceptance: every requirement checked against
    its verification path (commands run + outputs, files checked). Frontend
@@ -179,17 +179,17 @@ sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
    equals local `main` AND every worker commit is contained in
    `origin/main` (`git branch -r --contains <sha>`; fail loudly
    otherwise - that is never DONE). Remove TEMP worktrees. A
-   blocked loop (either `blocked` or `blocked-transient`) still lands
+   blocked loop still lands
    whatever passed and proves it the same way.
 9. **Report.** Implementation report + what remains + next concrete step,
    with the sec. 6 `Landed:` proof line. DONE uses the DONE shape;
    a budget-exhausted loop uses the sec. 6 `blocked` shape
-   (`blocked-transient` for transient exhaustion; symmetric,
+   (symmetric,
    still carrying the `Landed:` line for whatever did land). A turn parked
    on `awaiting-input` is neither DONE nor `blocked`: it lands whatever
    passed per sec. 7 (still with the `Landed:` line) and reports the REQ
    plus the pending human question. No
-   `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
+   `Landed:` proof, no DONE, and no `blocked`. Wait
    for the next task.
    Wrap-up with work in flight (non-terminal only): when the turn parks
    with actionable non-blocked non-awaiting REQs in flight, report what
@@ -274,8 +274,7 @@ Per-REQ status is explicit: `pending` (never dispatched), `dispatched`
 `blocked` (resend budget exhausted, evidence recorded, wrap-up done),
 `awaiting-input` (human question pending; set by the
 orchestrator when it asks a human-only question per sec. 2 step 1;
-nothing automatic ever resends it, and the external supervisor parks
-the whole goal as NOOP while any REQ awaits input). Checkbox mirrors
+nothing automatic ever resends it). Checkbox mirrors
 status: `- [ ]` for
 pending/dispatched/blocked/awaiting-input,
 `- [x]` for done only. A `blocked` REQ is never
@@ -330,7 +329,7 @@ Rules:
   recorded as `re-open: <date> reason`). A REQ marked `awaiting-input`
   is never resent and never integrated; only the human answer clears
   it to `dispatched` per the status rule above, never a resend, never
-  RESUME, never the supervisor.
+  RESUME.
 - Budget accounting: every sec. 2 step 5 verify + resend updates the Runs
   record, then commits AND pushes the goal
   branch. The single counter (`resends: <n>/10`) counts resends after the
@@ -423,7 +422,7 @@ still mandatory (isolation + remote backup before merge).
    listed; anything unlisted still asks.
 6. DONE, with the sec. 6 `Landed:` line in the report. A
    budget-exhausted loop lands whatever passed the sec. 2 step 5
-   checks the same way and reports `blocked` or `blocked-transient`
+   checks the same way and reports `blocked`
    per sec. 6 (still with
    the `Landed:` proof for what did land). A turn parked on
    `awaiting-input` lands whatever passed the same way and reports the
@@ -431,21 +430,20 @@ still mandatory (isolation + remote backup before merge).
    `Landed:` line for what did land).
 
 Sec. 8 RESUME feeds recovered branches into steps 1-2 above; the landing
-proof is unchanged and still required for DONE, for `blocked`, and for
-`blocked-transient`.
+proof is unchanged and still required for DONE and for `blocked`.
 
 ## 8. RESUME phase (crash-safe continuation, attended only)
 
 A server restart kills the orchestrator session but the work survives on
 the goal branch + worker branches. RESUME rebuilds session state from
 disk + remote; it adds nothing (no schedules, services, watchers,
-polling, idle hooks, unattended retries, or background work). In-turn transient retries stay
-per sec. 2 step 5 only; a restart that kills a turn mid-backoff resumes
-here, and only here, from the pushed Runs record (`retries: <m>/3`
-carries over like `re-fires: <n>/3`). RESUME runs only on a human goal
+polling, idle hooks, unattended retries, or background work). In-turn resends stay
+per sec. 2 step 5 only; a restart that kills a turn mid-loop resumes
+here, and only here, from the pushed Runs record (`resends: <n>/10`
+carries over). RESUME runs only on a human goal
 turn ("continue" or a re-run of `/goal`) when a manifest exists. One
-invocation still ends at DONE, `blocked`, or `blocked-transient`, or at
-the next human turn with work still in flight; nothing keeps running
+invocation still ends at DONE or `blocked`, or at the next human turn
+with work still in flight; nothing keeps running
 after that.
 
 On ANY goal turn with an existing manifest, the orchestrator MUST,
@@ -523,8 +521,10 @@ without it.
   real harm (3 PC-killing supervisor pile-ons) and answered a question
   the user never asked. The entire supervisor apparatus is gone
   (`scripts/goal-supervisor/`, the installer deploy + PATH blocks, all
-  arm/disarm rules); RESUME, clarify-check, transient retries, re-fire
-  budgets, and LAND are unchanged. A non-terminal wrap-up with work in
+  arm/disarm rules); RESUME, clarify-check, and LAND are unchanged
+  (transient retries + re-fire budgets were later retired by the
+  same-session resend driver, see step 5). A non-terminal wrap-up with
+  work in
   flight now reports + waits for the human; nothing arms.
 - Worked rationale: stale bases strand work (hence fetch + rebase on
   `origin/main` in sec. 2 step 4); PRs on the solo flow are pure
