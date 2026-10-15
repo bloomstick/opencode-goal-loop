@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+- `goal-loop`: free-tier dispatch fix (2026-10-15, proven on a live goal):
+  CLI-created custom `-s` session ids trip the free-tier auth gate (empty
+  session created, first model call fails with "free tier can only be used
+  from within OpenCode"), while server-assigned sessions run fine --
+  including `-s` resends into them. New rule: initial runs carry NO `-s`,
+  tag `--title goal-<slug>-<REQ>-run<n>`, resolve the assigned id via
+  `opencode session list` into the Runs record, resend with
+  `-s <assigned-id>`; delete custom-`-s` husks (`opencode session delete`)
+  so RESUME never mistakes them for live sessions. Patched: skill sec. 2
+  step 5 session-targeting, sec. 4 dispatch shape, sec. 5 Runs example,
+  `agents/goal-orch.md` driver line. Unblocks goals parked as `blocked`
+  on the auth gate: re-open per sec. 5 and re-dispatch the saved prompt
+  verbatim under a new run number with the title-tag shape.
+
 - `goal-loop`: full supervisor delete (REQ-01, user order 2026-10-15):
   the GOALAUTO background-autonomy experiment is OVER - it caused real
   harm (3 PC-killing supervisor pile-ons) and answered a question the

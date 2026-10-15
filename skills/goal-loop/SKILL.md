@@ -145,10 +145,18 @@ sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
      session id (the id assigned at dispatch, continued with `-s` /
      `--session`, never a fresh session id), foreground per sec. 4.
      Context accumulates in that session instead of restarting.
-   Session targeting: every dispatch assigns a deterministic session id
-   (`-s ses-<slug>-<req>-run<n>`, run1 for the initial run; the `ses-`
-   prefix is required by the CLI, which rejects ids not starting with
-   `ses`). Resends continue that id. One session id per REQ attempt chain.
+   Session targeting: the server assigns the session id at dispatch --
+   NEVER pass `-s` / `--session` with a fresh custom id on the initial
+   run: CLI-created custom ids trip the free-tier auth gate (an empty
+   session is created but the first model call fails with "free tier can
+   only be used from within OpenCode", proven 2026-10-15). Dispatch
+   WITHOUT `-s` and tag the run `--title goal-<slug>-<REQ>-run<n>`
+   (run1 for the initial run), then resolve the assigned id via
+   `opencode session list` (match the title) and record it in the Runs
+   record. Resends continue that assigned id with `-s` / `--session`
+   (proven good on server-assigned ids), never a fresh session id. One
+   session id per REQ attempt chain. Delete the empty husk if a `-s`
+   attempt ever slips through (`opencode session delete <id>`).
    Budget: max 10 resends after the initial run, counted in the manifest
    Runs record as `resends: <n>/10` (sec. 5) with one `resend<N>:` line per
    resend (saved `.out` path + checker verdict quoted). When the budget is
@@ -244,8 +252,19 @@ the worker's full context.
 Generic (any repo), one foreground call per worker batch, large timeout:
 
 ```powershell
-opencode run --auto --agent goal-worker -f <prompt-file> "<order>"
+opencode run --auto --agent goal-worker --model <incumbent-free-model> --title goal-<slug>-<REQ>-run<n> -f <prompt-file> "<order>"
 ```
+
+Free-tier auth gate (proven 2026-10-15): NEVER pass `-s` / `--session`
+with a fresh custom id -- CLI-created custom ids fail the free tier
+("can only be used from within OpenCode") while server-assigned sessions
+run fine, including resends. So the initial run carries NO `-s` (the
+`--title goal-<slug>-<REQ>-run<n>` tag identifies the chain); afterwards
+resolve the assigned id (`opencode session list`, match the title),
+record it in the Runs record, and continue it for resends with
+`-s <assigned-id>`. If a custom-`-s` husk ever gets created (empty
+"Untitled session"), remove it with `opencode session delete <id>` so a
+later RESUME never mistakes it for a live session.
 
 <prompt-file> is the saved file under
 `.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
@@ -297,7 +316,7 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 - REQ-02: after REQ-01
 ## Runs
 ### REQ-02
-- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" session ses-<slug>-REQ-02-run1 resends: <n>/10
+- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" session ses_ec2a...(server-assigned; title goal-<slug>-REQ-02-run1) resends: <n>/10
 - run1: <date> pushed: <sha or FAIL> | out: `runs/REQ-02-run1.out` | verdict: <DONE | BLOCKED | CONTINUE + reason>
 - resend1: <date> verdict: <DONE | BLOCKED | CONTINUE + reason> | out: `runs/REQ-02-run2.out` | resends: 1/10
 - resend2: <date> verdict: <DONE | BLOCKED | CONTINUE + reason> | out: `runs/REQ-02-run3.out` | resends: 2/10

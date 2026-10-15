@@ -49,7 +49,8 @@ item met with proof) integrates per LAND. BLOCKED (`(blocked)`-titled
 block last) wraps up with the evidence per skill sec. 6 (still with the
 `Landed:` line). CONTINUE (no block / block not last / malformed) re-sends
 `continue + outstanding items + report-block demand` into the SAME session
-id (the `-s ses-<slug>-<req>-run<n>` id assigned at dispatch, continued
+id (the server-assigned id from dispatch, tagged
+`--title goal-<slug>-<req>-run<n>` and recorded in Runs, continued
 with `-s` / `--session`, context preserved, never a fresh session id),
 foreground. Budget: max 10 resends after the initial run (`resends: <n>/10`
 in the manifest Runs record, one `resend<N>:` line each with the `.out`
