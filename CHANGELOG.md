@@ -2,24 +2,26 @@
 
 ## [Unreleased]
 
-- `goal-loop`: full supervisor delete (REQ-01, user order 2026-10-15):
-  the GOALAUTO background-autonomy experiment is OVER - it caused real
-  harm (3 PC-killing supervisor pile-ons) and answered a question the
-  user never asked. DELETED outright: `scripts/goal-supervisor/`
-  (Invoke, Register, Get, goal-sup.cmd). STRIPPED: the skill sec. 0
-  GOALAUTO exception block, the arm-at-start rule, the step 9
-  arm/disarm rules, every supervisor mention in steps 5/6/8 (a
-  non-terminal wrap-up with work in flight now reports + waits for the
-  human; nothing arms), the `goal-orch` arm/disarm + supervisor lines,
-  the standing-orders GOALAUTO pointer, the installer supervisor
-  deploy + PATH blocks, and harness secs. 4/6 supervisor sections
-  (replaced with a dated removal pointer; secs. 1-3 log locations +
-  incident protocol kept). History (GOALAUTO dates + why it died) lives
-  in the skill Appendix; past entries below stay as history.
-  Untouched: RESUME, clarify-check + saved-copy attachments,
-  `scripts/goal-init.ps1`, commands Step 0, transient retries, re-fire
-  budgets, blocked/awaiting-input, LAND proof, tiny-task rule. No
-  `goal-supervisor-*` scheduled tasks exist (verified before + after).
+- `goal-loop`: same-session checker + resend driver (REQ-02, 2026-10-15):
+  new PURE `scripts/goal-loop/Check-GoalOutput.ps1 -Transcript <path>`
+  (reads a captured transcript, prints `VERDICT: DONE` for a last
+  plain-titled block, `VERDICT: BLOCKED` for a last `(blocked)`-titled
+  block, else `VERDICT: CONTINUE` with the reason, all in the exact sec. 3
+  field order; exit 0 always; never dispatches). The orchestrator saves
+  every run stdout to `runs/<req>-run<N>.out`, runs the checker on it, and
+  executes the verdict: DONE integrates, BLOCKED wraps up, CONTINUE
+  re-sends `continue + outstanding items + report-block demand` into the
+  SAME session id (`-s ses-<slug>-<req>-run<n>` at dispatch, continued with
+  `-s` / `--session`; the `ses-` prefix is required by the CLI). Budget is
+  max 10 resends after the initial run (`resends: <n>/10` in Runs;
+  `resends: 10/10` means `blocked`); awaiting-input suppresses resend
+  (manifest status is truth for parking, transcript for completion); a
+  dead/missing session on resend means RESUME reconcile, never a fresh
+  silent run. RETIRED `re-fires:` / `retries:` counters and
+  `blocked-transient` (folded into `blocked`; SKILL.md sec. 2 step 5 +
+  sec. 5 + sec. 6 + sec. 8 and `goal-orch` DRIVER rewritten). Live proof:
+  `ses-oc2-probe` export showed both user messages in the same session,
+  then deleted.
 
 - `goal-supervisor` readable status + in-flight verdict (REQ-01,
   2026-10-15): `Invoke-GoalSupervisor.ps1` logs `REFIRE-START slug=<s>
