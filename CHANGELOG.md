@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+- `goal-loop`: same-session checker + resend driver (REQ-02, 2026-10-15):
+  new PURE `scripts/goal-loop/Check-GoalOutput.ps1 -Transcript <path>`
+  (reads a captured transcript, prints `VERDICT: DONE` for a last
+  plain-titled block, `VERDICT: BLOCKED` for a last `(blocked)`-titled
+  block, else `VERDICT: CONTINUE` with the reason, all in the exact sec. 3
+  field order; exit 0 always; never dispatches). The orchestrator saves
+  every run stdout to `runs/<req>-run<N>.out`, runs the checker on it, and
+  executes the verdict: DONE integrates, BLOCKED wraps up, CONTINUE
+  re-sends `continue + outstanding items + report-block demand` into the
+  SAME session id (`-s ses-<slug>-<req>-run<n>` at dispatch, continued with
+  `-s` / `--session`; the `ses-` prefix is required by the CLI). Budget is
+  max 10 resends after the initial run (`resends: <n>/10` in Runs;
+  `resends: 10/10` means `blocked`); awaiting-input suppresses resend
+  (manifest status is truth for parking, transcript for completion); a
+  dead/missing session on resend means RESUME reconcile, never a fresh
+  silent run. RETIRED `re-fires:` / `retries:` counters and
+  `blocked-transient` (folded into `blocked`; SKILL.md sec. 2 step 5 +
+  sec. 5 + sec. 6 + sec. 8 and `goal-orch` DRIVER rewritten). Live proof:
+  `ses-oc2-probe` export showed both user messages in the same session,
+  then deleted.
+
 - `goal-supervisor` readable status + in-flight verdict (REQ-01,
   2026-10-15): `Invoke-GoalSupervisor.ps1` logs `REFIRE-START slug=<s>
   attempt=<n>/<max> reqs=<list>` immediately before spawning

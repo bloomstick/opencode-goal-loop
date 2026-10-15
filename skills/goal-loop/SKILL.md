@@ -66,10 +66,8 @@ invocation as DONE (all REQs `done` + sec. 7 proof), explicit
 `blocked` (sec. 6 blocked report), or parked on `awaiting-input`
 (sec. 5: report names the REQ + pending question, then stop).
 No silent stop, no infinite loop:
-at most 1 initial run + 3 re-fires = 4 runs per REQ (WORK failures
-only), plus at most 3 transient retries per run that consume ZERO
-re-fire budget (sec. 2 step 5 TRANSIENT vs WORK, `retries: <n>/3`
-alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
+1 initial run + at most 10 same-session resends per REQ (checker-driven,
+sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
 (b) blocked-on-budget, (c) resume-mid-loop via sec. 8 RESUME,
 (d) parked-awaiting-input per sec. 5.
 
@@ -104,7 +102,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    holds SAVED paths + sha256 (sec. 5). Clarify-check: if the user
    message claims an attachment but none arrived (no `<file>` blocks, no
    paths), STOP and ask for the path/content as `awaiting-input` instead
-   of running blind. Workers receive NO attachments, never. Re-fire
+   of running blind. Workers receive NO attachments, never. Resend
    rules: see step 5.
 2. **Manifest.** Write `reqs-manifest.md` (see sec. 5) under
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
@@ -131,7 +129,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    sec. 8 only); the worker reads nothing beyond that list without
    recording why. No attachments on worker dispatches, ever: the worker
    `opencode run` call carries `-f <prompt-file>` ONLY, and the Runs
-   record carries no attachment field. Re-fire rules: see step 5.
+   record carries no attachment field. Resend rules: see step 5.
    Bounded fan-out: file-disjoint REQs MAY dispatch in
    parallel, at most 3 concurrent FOREGROUND runs in one shell call that
    waits for all of them (never background persistence: server-held
@@ -151,50 +149,46 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    anything the NEVER list forbids, multi-file refactors, live
    experiments, or landing/merging itself.
    Model routing (REQ-02 benchmark 2026-10-15, trivial probe count=4 lines=3,7,10,12): control opencode/muse-spark-1.3-contributor-free 13s PASS with report block and no auth error; opencode/nemotron-3.5-lightning-free 17s PASS with report block and no auth error; opencode/mimo-v2.6-flash-free 23s PASS with report block and no auth error. Verdict: no challenger beats the control, so routing stays incumbent for all classes with an incumbent-only fallback chain; budgets, branches, and caps unchanged.
-5. **Verify-after-every-run (bounded driver).** After EVERY foreground
-   run, before any integrate, classify the outcome first:
-   - TRANSIENT failure means the dispatch itself died before a
-     verifiable report was possible: rate limit, connection reset
-     (ECONNRESET), service 5xx/timeout aborting a dispatch mid-flight,
-     or a server-restart signature. No acceptance verdict exists.
-   - WORK failure means a completed run failed any of three checks:
-     (a) report block present as the last stdout block in the exact
-     sec. 3 order; (b) worker branch pushed to origin (tip visible via
-     `git ls-remote origin <worker-branch>`); (c) every numbered
-     acceptance item met with proof (commands + outputs, files checked).
-   A TRANSIENT failure triggers an immediate identical re-dispatch
-   INSIDE the turn (same prompt + order: the SAME attempt, ZERO re-fire
-   budget). No waits, no sleeps: user order 2026-10-15 removed all
-   backoff waits outright. Max 3 transient retries per run, back to
-   back; never condition polling, never schedules except the GOALAUTO
-   external-supervisor arm per sec. 0, never unbounded.
-   Record each as a `retry<N>:` line with `retries: <n>/3` in the Runs
-   record (sec. 5), commit AND push the goal branch per retry. When
-   all 3 transient retries are exhausted, NEVER wait a 4th time: mark
-   the REQ `blocked-transient` with the evidence (transient signature +
-   last outputs), commit AND push the goal branch, stop dispatching that
-   REQ, and go to wrap-up (steps 6-9, still with the `Landed:` line).
-   A server restart can still kill the turn itself mid-backoff: that
-   path stays covered ONLY by sec. 8 RESUME (state is on the goal branch
-   + worker branches), never by new autonomy except the GOALAUTO
-   external supervisor per sec. 0.
-   On a WORK failure (completed run, any check failing), re-fire the SAME
-   saved prompt + order (byte-identical, no edits), foreground
-   per sec. 4. Budget: max 3 re-fires per REQ, counted in the manifest
-   Runs record as `re-fires: <n>/3` alongside `retries: <n>/3` (sec. 5,
-   separate counters, never interchangeable). Each re-fire appends a
-   `re-fire<N>:` line, commits AND pushes the goal branch, then
-   dispatches. When the budget is exhausted, NEVER fire a 4th time: mark
-   the REQ `blocked` with the evidence (which check failed + last
-   outputs), commit AND push the goal branch, stop dispatching that REQ,
-   and go to wrap-up (steps 6-9, report `blocked` per sec. 6). Re-fire
-   is per-REQ pre-integration only: it never re-fires a `done` or
-   `awaiting-input` REQ and never bypasses the sec. 7 LAND proof.
-   A missing saved copy at re-fire time is evidence, never silent: when a
-   path under `<goaldir>/attachments/` is gone, classify per this step
-   (TRANSIENT while the dispatch died before a verifiable report was
-   possible, else WORK failure feeding the re-fire budget) and record
-   which saved path was missing with the last output.
+5. **Verify-after-every-run (same-session resend driver).** After EVERY
+   foreground run, before any integrate, the orchestrator saves the
+   captured stdout to `runs/<req>-run<N>.out` under the goal dir (N counts
+   every attempt: 1 is the initial run) and runs the PURE checker on it:
+   `scripts/goal-loop/Check-GoalOutput.ps1 -Transcript
+   runs/<req>-run<N>.out`. The checker only reads the transcript and prints
+   a verdict; it never dispatches. The orchestrator executes every resend
+   and records it. Verdicts:
+   - DONE means the transcript ends in a plain-titled report block in the
+     exact sec. 3 field order: verify the remaining checks (worker branch
+     pushed to origin, tip visible via `git ls-remote origin
+     <worker-branch>`; every numbered acceptance item met with proof),
+     then integrate per step 6.
+   - BLOCKED means the transcript ends in a `(blocked)`-titled report
+     block: wrap up per steps 6-9 with the evidence (report per sec. 6).
+   - CONTINUE means no DONE/BLOCKED verdict is possible yet (checker
+     reasons: no block / block not last / malformed): re-send a `continue
+     + outstanding items + report-block demand` prompt into the SAME
+     session id (the id assigned at dispatch, continued with `-s` /
+     `--session`, never a fresh session id), foreground per sec. 4.
+     Context accumulates in that session instead of restarting.
+   Session targeting: every dispatch assigns a deterministic session id
+   (`-s ses-<slug>-<req>-run<n>`, run1 for the initial run; the `ses-`
+   prefix is required by the CLI, which rejects ids not starting with
+   `ses`). Resends continue that id. One session id per REQ attempt chain.
+   Budget: max 10 resends after the initial run, counted in the manifest
+   Runs record as `resends: <n>/10` (sec. 5) with one `resend<N>:` line per
+   resend (saved `.out` path + checker verdict quoted). When the budget is
+   exhausted (`resends: 10/10`), NEVER send an 11th time: mark the REQ
+   `blocked` with the evidence (last `.out` + last verdicts), commit AND
+   push the goal branch, stop dispatching that REQ, and go to wrap-up
+   (steps 6-9, report `blocked` per sec. 6). Awaiting-input suppresses
+   resend: when the REQ status is `awaiting-input` per sec. 5, the
+   orchestrator never resends it (manifest status is truth for parking;
+   the transcript is truth for completion -- state the split). A dead or
+   missing session id on resend means RESUME reconcile per sec. 8 (kept
+   work is integrated, lost work is re-dispatched under a new run number),
+   never a fresh silent run under the same id.
+   The old `re-fires:` / `retries:` counters and `blocked-transient` are
+   RETIRED (folded into `blocked`; single resend budget now).
 6. **Integrate sequentially.** Merge one worker at a time onto
    local `main` with `git merge --no-ff` (see sec. 7 LAND; sec. 8 RESUME
    feeds recovered branches here; fan-out runs land here one by one),
@@ -310,18 +304,17 @@ edit the manifest directly; they report, the orchestrator records.
 
 Per-REQ status is explicit: `pending` (never dispatched), `dispatched`
 (branch in flight, Runs record below), `done` (pushed proof integrated),
-`blocked` (WORK re-fire budget exhausted, evidence recorded, wrap-up done),
-`blocked-transient` (transient retries exhausted, evidence recorded,
-wrap-up done), `awaiting-input` (human question pending; set by the
+`blocked` (resend budget exhausted, evidence recorded, wrap-up done),
+`awaiting-input` (human question pending; set by the
 orchestrator when it asks a human-only question per sec. 2 step 1;
-nothing automatic ever re-fires it, and the external supervisor parks
+nothing automatic ever resends it, and the external supervisor parks
 the whole goal as NOOP while any REQ awaits input). Checkbox mirrors
 status: `- [ ]` for
-pending/dispatched/blocked/blocked-transient/awaiting-input,
-`- [x]` for done only. A `blocked` or `blocked-transient` REQ is never
+pending/dispatched/blocked/awaiting-input,
+`- [x]` for done only. A `blocked` REQ is never
 marked done. ONLY a human answer clears `awaiting-input` back to
-`dispatched` with a new Runs entry (budgets carry over; nothing is
-consumed while parked); a `blocked`/`blocked-transient` REQ is never
+`dispatched` with a new Runs entry (budget carries over; nothing is
+consumed while parked); a `blocked` REQ is never
 silently converted to `awaiting-input` and vice versa.
 
 ```markdown
@@ -338,11 +331,10 @@ Base: <sha> | Date: <yyyy-mm-dd> | Slug: <slug> | Goal-branch: <goal-branch>
 - REQ-02: after REQ-01
 ## Runs
 ### REQ-02
-- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" re-fires: <n>/3 retries: <m>/3
-- run1: <date> pushed: <sha or FAIL> | report: <ok or FAIL-missing> | acceptance: <ok or FAIL-which-item>
-- retry1: <date> transient: <rate-limit | conn-reset | 5xx-timeout | restart-signature> | retries: 1/3
-- re-fire1: <date> result: <ok or FAIL-which-check> | re-fires: 1/3 | retries: <m>/3
-- re-fire2: <date> result: <ok or FAIL-which-check> | re-fires: 2/3 | retries: <m>/3
+- dispatch: <date> branch <worker-branch> prompt `prompts/REQ-02.<code>.md` order "<order text>" session ses-<slug>-REQ-02-run1 resends: <n>/10
+- run1: <date> pushed: <sha or FAIL> | out: `runs/REQ-02-run1.out` | verdict: <DONE | BLOCKED | CONTINUE + reason>
+- resend1: <date> verdict: <DONE | BLOCKED | CONTINUE + reason> | out: `runs/REQ-02-run2.out` | resends: 1/10
+- resend2: <date> verdict: <DONE | BLOCKED | CONTINUE + reason> | out: `runs/REQ-02-run3.out` | resends: 2/10
 - pushed: <sha or none-yet> (<date>) | report-tail: <last report lines>
 ## Log
 - <date> REQ-01 done by <branch> -- <proof>
@@ -362,21 +354,21 @@ Rules:
   `main`; pushing it does not push `main` (only sec. 7 LAND pushes `main`).
 - Invariant (no-redo): re-running any completed step is a bug. Presence
   of pushed proof moves a REQ forward, never backward. A REQ marked
-  `done` is never re-fired; a `dispatched` REQ with pushed commits on
+  `done` is never resent; a `dispatched` REQ with pushed commits on
   origin is integrated, not redone (see sec. 8 RESUME). A REQ marked
-  `blocked` or `blocked-transient` is never re-fired unless the user
+  `blocked` is never resent unless the user
   explicitly re-opens it
-  (re-open resets `blocked`/`blocked-transient` to `dispatched` with a new
-  Runs entry and fresh budgets -- 3 re-fires plus 3 transient retries,
+  (re-open resets `blocked` to `dispatched` with a new
+  Runs entry and a fresh budget -- resends reset to 0/10,
   recorded as `re-open: <date> reason`). A REQ marked `awaiting-input`
-  is never re-fired and never integrated; only the human answer clears
-  it to `dispatched` per the status rule above, never a re-fire, never
+  is never resent and never integrated; only the human answer clears
+  it to `dispatched` per the status rule above, never a resend, never
   RESUME, never the supervisor.
-- Budget accounting: every sec. 2 step 5 verify + re-fire + transient
-  retry updates the Runs record, then commits AND pushes the goal
-  branch. The two counters (`re-fires: <n>/3`, `retries: <m>/3`) are
-  separate and never interchangeable. A 4th fire or a 4th wait is never
-  allowed (see step 5 for the `blocked` / `blocked-transient` wrap-ups,
+- Budget accounting: every sec. 2 step 5 verify + resend updates the Runs
+  record, then commits AND pushes the goal
+  branch. The single counter (`resends: <n>/10`) counts resends after the
+  initial run. An 11th send is never
+  allowed (see step 5 for the `blocked` wrap-up,
   still with the `Landed:` line).
 - Attachments rule (orch-side only, user order 2026-10-15): the
   Attachments block holds SAVED repo-relative paths + sha256 in saved
@@ -402,7 +394,7 @@ After any resume (see sec. 8), the report opens with a resume summary
 line (before the per-worker detail):
 
 ```
-Resume: recovered <X> from pushed proof, re-fired <Y>, awaiting: <n>, redone: <nothing | describe>
+Resume: recovered <X> from pushed proof, re-dispatched <Y>, awaiting: <n>, redone: <nothing | describe>
 ```
 
 `awaiting: <n>` counts REQs skipped as `awaiting-input` per sec. 8
@@ -419,27 +411,25 @@ state (pushed vs. pending owner). No `Landed:` proof, no DONE.
 Landed: origin/main <sha> (local==remote: <sha>) | tags: <none pushed | pending owner>
 ```
 
-A budget-exhausted loop never ends silent: it reports `blocked` (or
-`blocked-transient` when transient retries exhausted) with a
+A budget-exhausted loop never ends silent: it reports `blocked` with a
 shape symmetric to DONE, still carrying the `Landed:` line for whatever
-did land (caps stay 3 re-fires per REQ and 3 transient retries per run,
-same as sec. 2 and sec. 5; both counters visible in the report, never
-interchangeable). Stdout MUST end with this block last:
+did land (cap stays 10 resends after the initial run per sec. 2 step 5
+and sec. 5; the counter is visible in the report). Stdout MUST end with
+this block last:
 
 ```
 <CODE> -- <title> (blocked)
 Added: <files that did land>
 SLOC: <+/-> 
-Tests/proofs: <commands + outputs + driver evidence: runs used <k>/4, re-fires <n>/3, retries <m>/3, last failure>
-Blocked: <REQ-xx> <reason: missing-report | branch-unpushed | acceptance-unmet | transient-exhausted> -- <evidence + last output>
+Tests/proofs: <commands + outputs + driver evidence: attempts used <k>/11, resends <n>/10, last verdict>
+Blocked: <REQ-xx> <reason: missing-report | branch-unpushed | acceptance-unmet | resends-exhausted> -- <evidence + last output>
 Landed: origin/main <sha> (local==remote: <sha>) | tags: <none pushed | pending owner>
 Caveats: <blocker + concrete step to re-open>
 ```
 
-`transient-exhausted` means the REQ status is `blocked-transient` (all 3
-transient retries used, evidence recorded); every other reason means
-`blocked` (WORK re-fire budget exhausted). Re-opening either resets both
-budgets per sec. 5.
+`resends-exhausted` means the REQ used all 10 resends without a DONE
+verdict (status `blocked`, last `.out` + last verdicts recorded).
+Re-opening resets the resend budget per sec. 5.
 
 ## 7. LAND phase (solo flow: merge locally, push, prove — no PRs)
 
@@ -506,12 +496,12 @@ before any new dispatch:
    chat memory, is the truth). Run `git fetch origin` so reconciliation
    sees the live remote.
 2. Reconcile each non-done, non-awaiting REQ against git (a `done` REQ is never
-   re-fired; a `blocked` or `blocked-transient` REQ resumes as-is unless
-   the user explicitly re-opens it per sec. 5, never silently re-fired;
-   an `awaiting-input` REQ is NOOP: skip it entirely, never re-fire it,
+   resent; a `blocked` REQ resumes as-is unless
+   the user explicitly re-opens it per sec. 5, never silently resent;
+   an `awaiting-input` REQ is NOOP: skip it entirely, never resend it,
    never integrate it, and count it as `awaiting: <n>` in the sec. 6
    resume summary):
-   - REQ marked `awaiting-input`: skip (NOOP). Never re-fire, never
+   - REQ marked `awaiting-input`: skip (NOOP). Never resend, never
      integrate, even with pushed commits on origin; it waits for the
      human answer, which clears it per sec. 5.
    - Branch with pushed commits on origin (branch exists AND its tip or
@@ -520,33 +510,37 @@ before any new dispatch:
      it per sec. 7 LAND steps 1-2 (merge ONE at a time, green suite
      after each). Mark the REQ `done` only after its merge + green run;
      commit AND push the goal branch on each mark.
-   - Branch absent, or present with no pushed commits: re-fire the saved
+   - Branch absent, or present with no pushed commits: re-dispatch the saved
      prompt file verbatim (`prompts/REQ-0<code>.md` + the recorded order
-     text, byte-identical, no edits) per sec. 4 (a missing saved copy is
-     evidence per sec. 2 step 5, never silent). Record the new run in
+     text, byte-identical, no edits) under a new run number per sec. 4 (a
+     missing saved copy is evidence, never silent: record which saved path
+     was missing with the last output). Record the new run in
      Runs, commit AND push the goal branch, then dispatch foreground per
      sec. 4.
-     The sec. 2 step 5 budgets carry over: keep counting the recorded
-     `re-fires: <n>/3` and `retries: <m>/3`, max 3 re-fires per REQ and
-     max 3 transient retries per run, never a 4th fire and never a 4th wait.
+     The sec. 2 step 5 budget carries over: keep counting the recorded
+     `resends: <n>/10`, max 10 resends after the initial run, never an 11th
+     send.
 3. Continue the loop from the first non-done, non-blocked, non-awaiting REQ
-   (either `blocked` or `blocked-transient` counts as blocked;
+   (`blocked` counts as blocked;
    `awaiting-input` counts as parked, never dispatched)
    (sec. 2 steps 4-9): dispatch what has no branch, integrate what
-   survived, verify-after-every-run per sec. 2 step 5, verify, land.
+   survived, resend into the recorded session id where it is still alive
+   (dead/missing session means reconcile: integrate kept work, re-dispatch
+   lost work under a new run number, never a fresh silent run),
+   verify-after-every-run per sec. 2 step 5, verify, land.
 4. Report a resume summary first (see sec. 6): recovered X from pushed
-   proof, re-fired Y, awaiting N, redone: nothing. If anything completed was
+   proof, re-dispatched Y, awaiting N, redone: nothing. If anything completed was
    re-executed, fail loudly: name the REQ, what was repeated, and why.
    Redo of a `done` REQ is a bug per the sec. 5 no-redo invariant:
    presence of pushed proof moves a REQ forward, never backward.
 
 Resume flows into LAND normally: DONE still requires the sec. 6
 `Landed:` proof. A resume summary alone is never DONE. A loop with a
-`blocked` or `blocked-transient` REQ still lands whatever passed and
-reports per sec. 6 (still with the `Landed:` line). The driver re-fire
-and the transient retry (sec. 2 step 5) are per-REQ pre-integration
-inside one invocation; RESUME never re-fires `done`, never silently
-re-opens `blocked` or `blocked-transient`, and never touches
+`blocked` REQ still lands whatever passed and
+reports per sec. 6 (still with the `Landed:` line). The driver resend loop
+(sec. 2 step 5) is per-REQ pre-integration
+inside one invocation; RESUME never resends `done`, never silently
+re-opens `blocked`, and never touches
 `awaiting-input` (only the human answer clears it per sec. 5). RESUME is
 the only restart path: it never adds autonomy beyond sec. 2 step 5 and
 the GOALAUTO external-supervisor arm per sec. 0.
