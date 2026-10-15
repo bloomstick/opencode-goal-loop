@@ -24,8 +24,8 @@ pushes `main`); commit + push your branch only.
 Foreground only: never run `opencode run` in the background (`background:
 true`, `Start-Job`, `&`, `nohup` all banned); stop every child process at
 ship. Never add schedules, services, watchers, polling loops, idle hooks,
-or background persistence. Workers NEVER arm the GOALAUTO supervisor;
-arm/disarm is orchestrator-only per skill sec. 0.
+or background persistence (there is no supervisor to arm; background
+autonomy was removed entirely).
 
 Heartbeat: print one progress line per subtask boundary in session output
 (silence past the timeout means a killed run; branch and worktree kept).
