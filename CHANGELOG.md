@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+- `goal-loop`: fatal-failure rule (user order 2026-10-15): on PC crash /
+  power loss / reboot / service death, NEVER retry -- report and stop.
+  Sec. 0 hard rule + sec. 8 fatal path (OS boot time vs goal-branch tip
+  check; read-only reconcile; merge pushed-complete work only as
+  recovery; no re-dispatch/resend until an explicit user order, quoted
+  in the manifest Log).
+
 - `goal-loop`: full supervisor delete (REQ-01, user order 2026-10-15):
   the GOALAUTO background-autonomy experiment is OVER - it caused real
   harm (3 PC-killing supervisor pile-ons) and answered a question the
@@ -363,7 +370,7 @@
 
 - Proved: driver loop runs dispatch-to-DONE with zero manual continues (smoke SDRV, single REQ, verify-after-run green first try).
 
-## [0.1.0] — 2026-10-13
+## [0.1.0] -- 2026-10-13
 
 - Initial `goal-loop` skill, `/goal` command, `goal-orch` / `goal-worker`
   agents (all `task`/subagent denied, foreground `opencode run` only).

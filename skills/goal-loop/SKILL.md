@@ -25,6 +25,14 @@ work runs as foreground `opencode run` processes, never as subagents.
 - NEVER write plugin state with locks/leases/claims (the old
   `.opencode/goals/state.json.lock*` system). Goal state is one plain
   `reqs-manifest.md` per goal, written atomically by the orchestrator.
+- NEVER retry after a fatal failure. A fatal failure is anything that
+  killed the machine or the host process itself: PC crash, power loss,
+  OS reboot, or the OpenCode service dying underneath a run (as
+  opposed to a dispatch that merely failed). On a fatal signature:
+  report to the user and stop -- do not re-dispatch, do not resend, do
+  not auto-continue. Merging already-pushed completed work is recovery,
+  not retry, and is allowed; creating any new run is not. Resume only
+  on an explicit user order (see sec. 8 fatal path).
 - Orchestrator never does worker work when delegating, except the
   tiny-task fast path (sec. 2 step 4: inline ONLY when all tiny caps
   hold, same acceptance bar, escalate to a worker the moment they
@@ -34,9 +42,9 @@ work runs as foreground `opencode run` processes, never as subagents.
 
 ## 1. When to use
 
-- `/goal <task>` — user wants requirements-to-verified-code, hands-off.
-- 2+ independent file-disjoint requirements — fan out to child agents.
-- Single requirement — run it as one child agent, same protocol.
+- `/goal <task>` -- user wants requirements-to-verified-code, hands-off.
+- 2+ independent file-disjoint requirements -- fan out to child agents.
+- Single requirement -- run it as one child agent, same protocol.
 - Do NOT use for open-ended chat, or for same-file edits in parallel
   (split into disjoint touch sets or run sequentially).
 
@@ -363,7 +371,7 @@ Resume: recovered <X> from pushed proof, re-dispatched <Y>, awaiting: <n>, redon
 with what was repeated and why the no-redo invariant (see sec. 5) broke.
 A resume summary alone is never DONE.
 
-DONE block gains a `Landed:` line — `origin/main` SHA, local==remote
+DONE block gains a `Landed:` line -- `origin/main` SHA, local==remote
 proof (`git rev-parse main` vs `git ls-remote origin main`), tag/release
 state (pushed vs. pending owner). No `Landed:` proof, no DONE.
 
@@ -391,7 +399,7 @@ Caveats: <blocker + concrete step to re-open>
 verdict (status `blocked`, last `.out` + last verdicts recorded).
 Re-opening resets the resend budget per sec. 5.
 
-## 7. LAND phase (solo flow: merge locally, push, prove — no PRs)
+## 7. LAND phase (solo flow: merge locally, push, prove -- no PRs)
 
 No PRs on the solo flow (no branch protection, no PR CI to gate on).
 The loop closes itself in the same invocation. Branch-per-worker is
@@ -404,7 +412,7 @@ still mandatory (isolation + remote backup before merge).
    ONE at a time. Re-run the named green suite after each merge; on
    conflict, resolve, re-verify the suite, then continue with the next
    branch. Never batch merges without a green run between them.
-3. `git push origin main` (orchestrator only — workers never push
+3. `git push origin main` (orchestrator only -- workers never push
    `main`). Never push tags unless the goal explicitly says publish;
    releases stay pending owner by default. Tag pushes and release PRs
    proceed without gating only when listed in standing orders (sec. 2
@@ -413,7 +421,7 @@ still mandatory (isolation + remote backup before merge).
    - `git ls-remote origin main` SHA equals local `git rev-parse main`.
    - Every worker commit is contained in `origin/main`:
      `git branch -r --contains <worker-sha>` must list `origin/main`.
-   - Fail loudly otherwise — an unproven push is never DONE.
+   - Fail loudly otherwise -- an unproven push is never DONE.
 5. Remove TEMP worktrees (`git worktree remove <path>`). Keep branches
    as remote backup until the report is accepted. Deleting a merged
    remote worker branch after the LAND proof is pre-authorized only when
@@ -433,6 +441,39 @@ Sec. 8 RESUME feeds recovered branches into steps 1-2 above; the landing
 proof is unchanged and still required for DONE and for `blocked`.
 
 ## 8. RESUME phase (crash-safe continuation, attended only)
+
+A server restart kills the orchestrator session but the work survives on
+the goal branch + worker branches. RESUME rebuilds session state from
+disk + remote; it adds nothing (no schedules, services, watchers,
+polling, idle hooks, unattended retries, or background work). In-turn resends stay
+per sec. 2 step 5 only; a restart that kills a turn mid-loop resumes
+here, and only here, from the pushed Runs record (`resends: <n>/10`
+carries over). RESUME runs only on a human goal
+turn ("continue" or a re-run of `/goal`) when a manifest exists. One
+invocation still ends at DONE or `blocked`, or at the next human turn
+with work still in flight; nothing keeps running
+after that.
+
+Fatal path (PC crash / power loss / reboot -- NEVER retry, report
+instead): before reconciling, determine whether the HOST died since the
+goal last progressed. Compare OS boot time against the goal branch's
+last commit time:
+
+```powershell
+$boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+$last = [datetime](git log -1 --format=%cI origin/<goal-branch>)
+$fatal = $boot -gt $last
+```
+
+If `$fatal` is true (machine rebooted mid-goal): reconcile read-only
+(step 2 below, assessment only), then merge already-pushed completed
+branches (recovery of proof, explicitly NOT a retry), then report the
+fatal summary (what survived on origin, what was in flight and is now of
+unknown state, what needs a human decision) and STOP. Re-dispatching or
+resending ANY run on the fatal path is forbidden. Continue only on an
+explicit user order naming what to do; that order is quoted in the
+manifest Log. A plain "continue" after a fatal report re-runs this
+assessment, it does not authorize re-dispatch.
 
 A server restart kills the orchestrator session but the work survives on
 the goal branch + worker branches. RESUME rebuilds session state from

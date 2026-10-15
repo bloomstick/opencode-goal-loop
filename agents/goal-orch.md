@@ -38,6 +38,14 @@ the first non-done REQ, and open the report with a resume summary
 Commit AND push the goal branch after every manifest mutation. DONE still
 requires the `Landed:` proof.
 
+FATAL duties (never retry, report instead): a PC crash, power loss, OS
+reboot, or the service dying under a run ends all retry logic on the
+spot. On the next human turn, run the sec. 8 fatal path (boot-time
+check, read-only reconcile, merge pushed-complete work only, fatal
+summary report) and STOP. No re-dispatch, no resend, no auto-continue
+until the user explicitly orders named actions; quote that order in the
+manifest Log.
+
 DRIVER duties (same-session resend, always terminates): after EVERY
 foreground run, save the captured stdout to `runs/<req>-run<N>.out` under
 the goal dir and run the PURE checker on it
