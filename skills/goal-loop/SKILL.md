@@ -13,17 +13,15 @@ only. Incident history and rationale live in the trailing Appendix
 Free-tier constraint: the `task` tool (subagents) is unavailable. All child
 work runs as foreground `opencode run` processes, never as subagents.
 
-## 0. Hard rules (one bounded exception: GOALAUTO)
+## 0. Hard rules
 
 - NEVER use the `subagent` task tool. It is unavailable on free tier and
   forbidden here. Deny it in agent frontmatter (`permission: task: deny`).
 - NEVER run `opencode run` in background (`shell` `background: true`,
   `Start-Job` holding it server-side, `&`, `nohup`). Foreground only.
 - NEVER add schedules, services, watchers, polling loops, idle hooks, or
-  background persistence, except the GOALAUTO external supervisor below.
-  Attended loop only: one `/goal` invocation runs
-  to DONE, then stops. No timers survive the session except a
-  time-boxed armed supervisor (see exception).
+  background persistence. Attended loop only: one `/goal` invocation runs
+  to DONE, then stops. No timers survive the session.
 - NEVER write plugin state with locks/leases/claims (the old
   `.opencode/goals/state.json.lock*` system). Goal state is one plain
   `reqs-manifest.md` per goal, written atomically by the orchestrator.
@@ -33,23 +31,6 @@ work runs as foreground `opencode run` processes, never as subagents.
   break). Workers never touch
   seams outside their scope. Workers: branch only, never push `main` (only
   the orchestrator pushes `main`, in §7 LAND).
-
-GOALAUTO exception (user order 2026-10-14, the ONLY sec. 0 exception,
-arming made MANDATORY by user order 2026-10-15):
-after the manifest is written + pushed, or at a wrap-up that leaves
-actionable non-blocked non-awaiting REQs in flight, the orchestrator
-MUST register + enable the EXTERNAL supervisor only (Windows Scheduled Task
-outside the OpenCode server, per
-docs/crash-log-harness.md sec. 6, via
-Register-GoalSupervisor.ps1 (global copy `~/.config/opencode/goal-supervisor/`, else repo `scripts/goal-supervisor/`)
-with `-Enable` and
-a stated time box), and MUST unregister it at any terminal wrap-up
-(DONE / `blocked` / `blocked-transient`). If arming fails, record the
-failure in Runs/Log + report and continue the goal anyway (arming is
-insurance, never a gate). The user saying "no supervisor" opts out.
-Every other sec. 0 ban
-stands: no subagents, no server-held background, no
-schedules-as-monitoring, no polling, no unbounded waits.
 
 ## 1. When to use
 
@@ -110,13 +91,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    `.opencode/goal-loop/<slug>/` (repo-local, per goal). This file, not
    chat memory, is the acceptance record and the resumable state for
    sec. 8 RESUME. Commit AND push the goal branch after every manifest
-   mutation (see sec. 5 rules). Arm-at-start (GOALAUTO sec. 0 exception,
-   MANDATORY since 2026-10-15 unless the user said no supervisor):
-   after the manifest is written + pushed, the orchestrator MUST arm the
-   EXTERNAL supervisor when actionable non-blocked non-awaiting REQs are
-   in flight; record task name + box in Runs/Log + report (full
-   call, idempotency, and never-arm-on-`awaiting-input`: see step 9).
-   A failed arm is recorded, never a gate: continue the goal anyway.
+   mutation (see sec. 5 rules).
 3. **DAG.** Map dependencies. No-dependency requirements may run parallel
    (bounded fan-out: see step 4); dependent ones run in order. Same-file
    edits always sequential.
@@ -166,8 +141,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    INSIDE the turn (same prompt + order: the SAME attempt, ZERO re-fire
    budget). No waits, no sleeps: user order 2026-10-15 removed all
    backoff waits outright. Max 3 transient retries per run, back to
-   back; never condition polling, never schedules except the GOALAUTO
-   external-supervisor arm per sec. 0, never unbounded.
+   back; never condition polling, never schedules, never unbounded.
    Record each as a `retry<N>:` line with `retries: <n>/3` in the Runs
    record (sec. 5), commit AND push the goal branch per retry. When
    all 3 transient retries are exhausted, NEVER wait a 4th time: mark
@@ -176,8 +150,7 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    REQ, and go to wrap-up (steps 6-9, still with the `Landed:` line).
    A server restart can still kill the turn itself mid-backoff: that
    path stays covered ONLY by sec. 8 RESUME (state is on the goal branch
-   + worker branches), never by new autonomy except the GOALAUTO
-   external supervisor per sec. 0.
+   + worker branches), never by new autonomy.
    On a WORK failure (completed run, any check failing), re-fire the SAME
    saved prompt + order (byte-identical, no edits), foreground
    per sec. 4. Budget: max 3 re-fires per REQ, counted in the manifest
@@ -222,16 +195,10 @@ alongside `re-fires: <n>/3`). Terminal paths are: (a) all-done,
    plus the pending human question. No
    `Landed:` proof, no DONE, no `blocked`, and no `blocked-transient`. Wait
    for the next task.
-   Arm (GOALAUTO sec. 0 exception, non-terminal wrap-up only,
-   MANDATORY since 2026-10-15 unless the user said no supervisor): when the
-   turn parks with actionable non-blocked non-awaiting REQs in flight
-   (including arm-at-start right after the manifest is written + pushed),
-   the orchestrator MUST register + enable the EXTERNAL supervisor via
-   Register-GoalSupervisor.ps1 with `-Enable` and a stated time box (per
-   harness sec. 6; idempotent; record task name + box in Runs/Log +
-   report). A failed arm is recorded, never a gate. Disarm (terminal wrap-up): at DONE / `blocked` /
-   `blocked-transient`, the orchestrator MUST unregister the supervisor
-   if armed, and records + reports it. Never arm while any REQ is
+   Wrap-up with work in flight (non-terminal only): when the turn parks
+   with actionable non-blocked non-awaiting REQs in flight, report what
+   remains + the next concrete step and wait for the human; nothing arms,
+   nothing keeps running. Never park this way while any REQ is
    `awaiting-input`; nothing keeps running after a terminal wrap-up or a
    parked `awaiting-input` turn.
 
@@ -288,9 +255,7 @@ opencode run --auto --agent goal-worker -f <prompt-file> "<order>"
 `.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
 <order> must match the manifest Runs record verbatim so a re-fire is
 byte-identical. Worker dispatches carry `-f <prompt-file>` ONLY, never
-attachments (re-fire rules per sec. 2 step 5). The supervisor re-invokes
-the ORCHESTRATOR with the manifest Attachments `-f` set appended; the
-orchestrator re-reads the manifest for the rest.
+attachments (re-fire rules per sec. 2 step 5).
 
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
 `opencode run` as a foreground process so the server never holds background
@@ -314,8 +279,7 @@ Per-REQ status is explicit: `pending` (never dispatched), `dispatched`
 `blocked-transient` (transient retries exhausted, evidence recorded,
 wrap-up done), `awaiting-input` (human question pending; set by the
 orchestrator when it asks a human-only question per sec. 2 step 1;
-nothing automatic ever re-fires it, and the external supervisor parks
-the whole goal as NOOP while any REQ awaits input). Checkbox mirrors
+nothing automatic ever re-fires it). Checkbox mirrors
 status: `- [ ]` for
 pending/dispatched/blocked/blocked-transient/awaiting-input,
 `- [x]` for done only. A `blocked` or `blocked-transient` REQ is never
@@ -371,7 +335,7 @@ Rules:
   recorded as `re-open: <date> reason`). A REQ marked `awaiting-input`
   is never re-fired and never integrated; only the human answer clears
   it to `dispatched` per the status rule above, never a re-fire, never
-  RESUME, never the supervisor.
+  RESUME.
 - Budget accounting: every sec. 2 step 5 verify + re-fire + transient
   retry updates the Runs record, then commits AND pushes the goal
   branch. The two counters (`re-fires: <n>/3`, `retries: <m>/3`) are
@@ -382,9 +346,7 @@ Rules:
   Attachments block holds SAVED repo-relative paths + sha256 in saved
   order (`Attachments: none` when empty). Workers receive NO attachments:
   no attachment flags on worker dispatches, no attachment field in Runs,
-  no worker-side attachment access. The supervisor re-invokes the
-  ORCHESTRATOR with the manifest Attachments `-f` set appended
-  (sec. 4, unchanged).
+  no worker-side attachment access.
 
 ## 6. Report
 
@@ -392,11 +354,7 @@ Per worker + integration: task-code, files, SLOC structural-vs-cheap
 split, commands + outputs, `Caveats: none` or explicit list (unverified
 areas, risks, follow-ups). Proof norms: quote trimmed command outputs
 (`Select-Object -First N`) plus hashes over the full dumps; full
-terminal scrollback is not evidence. Where the GOALAUTO supervisor was
-armed or
-disarmed this turn, the report carries one line each:
-`Armed: goal-supervisor-<slug> box <N>h` and/or
-`Disarmed: goal-supervisor-<slug>`. Stdout MUST end with the sec. 3 report block last.
+terminal scrollback is not evidence. Stdout MUST end with the sec. 3 report block last.
 
 After any resume (see sec. 8), the report opens with a resume summary
 line (before the per-worker detail):
@@ -487,17 +445,15 @@ proof is unchanged and still required for DONE, for `blocked`, and for
 
 A server restart kills the orchestrator session but the work survives on
 the goal branch + worker branches. RESUME rebuilds session state from
-disk + remote; it adds nothing but the GOALAUTO external-supervisor arm
-per sec. 0 (no schedules, services, watchers, polling, idle hooks,
-unattended retries, or background work). In-turn transient retries stay
+disk + remote; it adds nothing (no schedules, services, watchers,
+polling, idle hooks, unattended retries, or background work). In-turn transient retries stay
 per sec. 2 step 5 only; a restart that kills a turn mid-backoff resumes
 here, and only here, from the pushed Runs record (`retries: <m>/3`
 carries over like `re-fires: <n>/3`). RESUME runs only on a human goal
 turn ("continue" or a re-run of `/goal`) when a manifest exists. One
 invocation still ends at DONE, `blocked`, or `blocked-transient`, or at
 the next human turn with work still in flight; nothing keeps running
-after that except an armed GOALAUTO supervisor per sec. 0 (disarmed at
-any terminal wrap-up).
+after that.
 
 On ANY goal turn with an existing manifest, the orchestrator MUST,
 before any new dispatch:
@@ -548,8 +504,7 @@ and the transient retry (sec. 2 step 5) are per-REQ pre-integration
 inside one invocation; RESUME never re-fires `done`, never silently
 re-opens `blocked` or `blocked-transient`, and never touches
 `awaiting-input` (only the human answer clears it per sec. 5). RESUME is
-the only restart path: it never adds autonomy beyond sec. 2 step 5 and
-the GOALAUTO external-supervisor arm per sec. 0.
+the only restart path: it never adds autonomy beyond sec. 2 step 5.
 
 ## Appendix: history and examples (non-normative)
 
@@ -563,9 +518,17 @@ without it.
   ever installed. Server-held background `opencode run` children
   restarted the server 3 times on 2026-10-12. Design answer: no hooks,
   no background children, plain-manifest state only (see preamble).
-- GOALAUTO provenance: the sec. 0 exception was a user order of
-  2026-10-14, the ONLY exception ever granted. Register-then-enable is
-  idempotent because Register unregisters the name first.
+- GOALAUTO provenance + removal: the sec. 0 exception was a user order
+  of 2026-10-14 (arming made MANDATORY by user order 2026-10-15), the
+  ONLY exception ever granted. Register-then-enable was idempotent
+  because Register unregistered the name first. REMOVED by user order
+  2026-10-15 (REQ-01, full supervisor delete): the experiment caused
+  real harm (3 PC-killing supervisor pile-ons) and answered a question
+  the user never asked. The entire supervisor apparatus is gone
+  (`scripts/goal-supervisor/`, the installer deploy + PATH blocks, all
+  arm/disarm rules); RESUME, clarify-check, transient retries, re-fire
+  budgets, and LAND are unchanged. A non-terminal wrap-up with work in
+  flight now reports + waits for the human; nothing arms.
 - Worked rationale: stale bases strand work (hence fetch + rebase on
   `origin/main` in sec. 2 step 4); PRs on the solo flow are pure
   roundtrips with no gate (hence merge-locally LAND in sec. 7); sunk-cost
