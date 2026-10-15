@@ -20,15 +20,15 @@ restarted the server 3 times on 2026-10-12. This loop avoids all three: no
 hooks or auto-continue, foreground child agents only, and one plain
 `reqs-manifest.md` per goal instead of lock files.
 
-Free-tier safe: the `task` (subagent) tool is denied in both agents. All
-child work runs as foreground `opencode run` processes.
+Dispatch: the `subagent` tool when available (verified working
+2026-10-15), else foreground `opencode run` processes as fallback.
 
 ## How it works
 
 `/goal <task>` -> clarify requirements with you (best-guess atomics,
 `recommend` accepts all) -> write `reqs-manifest.md` -> map the dependency
-DAG -> dispatch one worktree + branch per worker via foreground `opencode
-run` (independent requirements in parallel, same-file edits sequential) ->
+DAG -> dispatch one worktree + branch per worker via `subagent` (fallback:
+foreground `opencode run`; independent requirements in parallel, same-file edits sequential) ->
 integrate sequentially with the green suite re-run after each -> verify every
 requirement -> report DONE. Full spec in `skills/goal-loop/SKILL.md`.
 

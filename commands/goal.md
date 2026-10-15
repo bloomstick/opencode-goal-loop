@@ -12,8 +12,8 @@ If empty, ask for the task first — do not start the loop on an empty goal.
 
 Phases: clarify requirements with the user (propose best-guess atomics,
 `recommend` accepts all) → write `.opencode/goal-loop/<slug>/reqs-manifest.md`
-→ DAG → dispatch child agents via foreground `opencode run` (never the
-`task`/subagent tool, never background) → integrate sequentially → verify
+→ DAG → dispatch child agents via the `subagent` tool when available
+(fallback: foreground `opencode run`, never background) → integrate sequentially → verify
 every requirement against the manifest → report DONE.
 
 No schedules, no watchers, no polling, no background persistence. One

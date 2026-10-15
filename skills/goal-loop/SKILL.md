@@ -1,6 +1,6 @@
 ---
 name: goal-loop
-description: Fully automated coding loop for OpenCode without plugins. Use when asked to run /goal, drive requirements-to-verified-code with child agents via foreground opencode run, or replace crash-prone goal plugins on free-tier models with no subagent access.
+description: Fully automated coding loop for OpenCode without plugins. Use when asked to run /goal, drive requirements-to-verified-code with child agents via subagent tool or foreground opencode run, or replace crash-prone goal plugins.
 ---
 
 # goal-loop - automated coding loop with child agents, no plugins
@@ -10,13 +10,20 @@ no hooks, no server code, no background children, plain-manifest state
 only. Incident history and rationale live in the trailing Appendix
 (non-normative); the core below reads end-to-end without it.
 
-Free-tier constraint: the `task` tool (subagents) is unavailable. All child
-work runs as foreground `opencode run` processes, never as subagents.
+Child-agent dispatch (2026-10-15 update: subagent tool verified working):
+preferred path is the `subagent` tool (`default.subagent`) when available
+- it runs foreground, supports parallel fan-out, and returns a report block.
+Fallback when `subagent` is unavailable (older free-tier sessions) is
+foreground `opencode run` processes per sec. 4, never background.
 
 ## 0. Hard rules
 
-- NEVER use the `subagent` task tool. It is unavailable on free tier and
-  forbidden here. Deny it in agent frontmatter (`permission: task: deny`).
+- Subagent dispatch is ALLOWED. Preferred child path is the `subagent`
+  tool when the session exposes it (`default.subagent`: `agent`,
+  `description`, `prompt`; fresh context per child, so prompts are
+  self-contained). Foreground `opencode run` per sec. 4 remains the
+  fallback when `subagent` is unavailable. Do NOT deny `task` in agent
+  frontmatter anymore; omit the `permission: task: deny` block.
 - NEVER run `opencode run` in background (`shell` `background: true`,
   `Start-Job` holding it server-side, `&`, `nohup`). Foreground only.
 - NEVER add schedules, services, watchers, polling loops, idle hooks, or
@@ -31,6 +38,12 @@ work runs as foreground `opencode run` processes, never as subagents.
   break). Workers never touch
   seams outside their scope. Workers: branch only, never push `main` (only
   the orchestrator pushes `main`, in §7 LAND).
+- NEVER run orchestrator or worker child agents on local models (`ollama`,
+  `lmstudio`, `vllm`, or any OpenAI-compatible local endpoint). Dispatched
+  `opencode run` workers inherit the session model: never pass `--model`
+  with a local model, and never set an agent `model` to a local provider.
+  Local models lack the tool-use and context capacity worker duties
+  require; a local-model worker silently degrades verification.
 
 ## 1. When to use
 
@@ -270,7 +283,8 @@ later RESUME never mistakes it for a live session.
 `.opencode/goal-loop/<slug>/prompts/` (see sec. 5), not a $TEMP copy;
 <order> must match the manifest Runs record verbatim so a re-fire is
 byte-identical. Worker dispatches carry `-f <prompt-file>` ONLY, never
-attachments (re-fire rules per sec. 2 step 5).
+attachments (re-fire rules per sec. 2 step 5). Never add `--model`:
+workers inherit the session model, and sec. 0 bans local models as workers.
 
 In noveldream, ALWAYS dispatch through `tools/dispatch/` (it parents each
 `opencode run` as a foreground process so the server never holds background
