@@ -25,8 +25,8 @@ later installs never overwrite your copy (see `Install-GoalLoop.ps1`).
 
 Standing orders cannot override skill sec. 0 hard rules, no exceptions:
 
-- NEVER the `task`/subagent tool (unavailable on free tier, denied in
-  frontmatter).
+- Subagent dispatch is allowed (2026-10-15: `subagent` tool verified
+  working). Prefer `subagent`; foreground `opencode run` is the fallback.
 - NEVER background `opencode run` (no `background: true`, no holding it
   server-side, no `&`, no `nohup`). Foreground only.
 - NEVER schedules, services, watchers, polling loops, idle hooks, or
@@ -34,6 +34,10 @@ Standing orders cannot override skill sec. 0 hard rules, no exceptions:
   `blocked-transient`, then stops.
 - NEVER unbounded waits or condition polling. Transient retries stay
   bounded per sec. 2 step 5 (max 3, announced 2/5/10 min waits).
+- NEVER run orchestrator or worker child agents on local models
+  (`ollama`, `lmstudio`, `vllm`, or any OpenAI-compatible local
+  endpoint). Workers inherit the session model; no `--model` flag, no
+  agent `model` pinned to a local provider.
 
 Any line below that claims one of the above is void.
 
