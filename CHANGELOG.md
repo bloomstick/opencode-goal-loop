@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- `goal-loop`: abandon-is-not-stop (2026-10-17, proven live): an
+  abandoned session keeps running its queued turns — "stop reconnecting"
+  is NOT a kill; two workers end up racing one worktree. THE KILL PATH
+  is `opencode session delete <sessionID>` (terminates the mid-turn
+  loop immediately; the abandoned subagent then reports "completed
+  without a text response"). Order of operations: kill the burned
+  session FIRST, verify the worktree (no index.lock, sane status), THEN
+  fire the salvage worker.
+
 - `goal-loop`: staged-evidence sweep (2026-10-17, after the seam re-roll
   duplicated ~5-8 GPU jobs): gen workers stage attempt evidence at ONE
   fixed path per REQ (`<goaldir>/staging/<REQ-code>/`, recorded in the

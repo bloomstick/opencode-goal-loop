@@ -320,6 +320,15 @@ as attempts, and never re-run a prompt+seed pair that already produced
 evidence. Failed gen evidence lives there, NOT in the repo (repo stays
 clean of rejects); the ledger cites staging paths + hashes.
 
+ABANDON IS NOT STOP (user order 2026-10-17, proven live): an abandoned
+session keeps running its queued turns on the shared worktree — two
+workers racing one branch. "Continuing" or not reconnecting is NOT a
+kill. THE KILL PATH is `opencode session delete <sessionID>` (CLI): it
+terminates the session's mid-turn loop immediately (the abandoned
+subagent then reports "completed without a text response"). Kill the
+burned session FIRST, verify the worktree (no `index.lock`, sane
+status), THEN fire the salvage worker on it.
+
 ## 5. Manifest format (`reqs-manifest.md`)
 
 The manifest is resumable state: everything needed to continue after a
