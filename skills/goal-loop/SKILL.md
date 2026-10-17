@@ -296,6 +296,19 @@ invocations.
 To stop a worker there is no kill API: read its transcript, then abandon
 its branch/worktree. The fan-out `-Timeout` cap stops hung jobs.
 
+Worker death mid-task (user order 2026-10-17, proven after four
+host-restart worker deaths): CONTINUE the stopped session by its
+assigned id ("continue: finish per brief") instead of firing a fresh
+one -- the session's context (what it kept/redid, where its proofs
+stand) survives and nothing re-runs. Fire fresh ONLY when the session
+is unrecoverable (no id / host lost it). Crash-proof the worker: its
+brief orders commit + push after every numbered item, so a death never
+loses more than one item and the next session (or its continuation)
+inherits committed, auditable work instead of raw scaffolding. Under
+restarty hosts, host-managed background subagent dispatch survives
+while foreground fires die with the host; `opencode run` stays
+foreground-only regardless.
+
 ## 5. Manifest format (`reqs-manifest.md`)
 
 The manifest is resumable state: everything needed to continue after a
@@ -374,6 +387,13 @@ Rules:
   order (`Attachments: none` when empty). Workers receive NO attachments:
   no attachment flags on worker dispatches, no attachment field in Runs,
   no worker-side attachment access.
+- Loop conventions (user orders that shape the loop itself -- e.g.
+  worker-continuity reconnect-don't-refire, bookkeeping committed ONLY
+  on the goal branch while the repo working folder stays checked out
+  on `main` for owner playtesting, noise-sweep before every branch
+  switch) are recorded under `## Loop conventions` at the TOP of the
+  manifest, right after the header, so every RESUME re-reads them as
+  manifest state -- never chat memory.
 
 ## 6. Report
 
@@ -382,6 +402,22 @@ split, commands + outputs, `Caveats: none` or explicit list (unverified
 areas, risks, follow-ups). Proof norms: quote trimmed command outputs
 (`Select-Object -First N`) plus hashes over the full dumps; full
 terminal scrollback is not evidence. Stdout MUST end with the sec. 3 report block last.
+
+Checker contract (`Check-GoalOutput.ps1`, proven 2026-10-17 -- two
+CONTINUE verdicts burned on one run before this was nailed): the
+report block is FIVE CONSECUTIVE SINGLE-LINE fields -- title line,
+`Added:`, `SLOC:`, `Tests/proofs:`, `Caveats:` -- each field ONE line
+(enumerate with semicolons), and NOTHING after `Caveats:`. Bullets or
+blank lines between the field lines read as malformed, and any
+non-blank content after the block reads as "block not last". When
+transcribing a worker report into `runs/<REQ>-run<N>.out`, compress
+every field to one line.
+
+Green-suite norm for repos with pre-existing import/scan noise (proven
+2026-10-17): the suite verdict is "exit code 0 + no NEW error classes
+vs base" -- quote the base comparison. A literal "0 ERROR" is often
+unachievable (archived GLB texture deps, console encoding noise) and
+demanding it forces workers to claim false proofs.
 
 After any resume (see sec. 8), the report opens with a resume summary
 line (before the per-worker detail):

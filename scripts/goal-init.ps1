@@ -101,7 +101,7 @@ $Manifest = @(
 )
 [IO.File]::WriteAllLines((Join-Path $Root $ManifestRel), $Manifest, [Text.Encoding]::ASCII)
 
-& cmd /c "git -C ""$Root"" add $GoalDirRel >nul 2>&1"
+& cmd /c "git -C ""$Root"" add -f $GoalDirRel >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "git add $GoalDirRel failed" }
 & cmd /c "git -C ""$Root"" commit -m ""goal($Slug): init branch + manifest skeleton"" >nul 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "git commit failed" }

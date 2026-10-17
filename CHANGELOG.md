@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+- `goal-loop`: worker-continuity + crash-proof dispatch (2026-10-17,
+  proven on a live goal after four host-restart worker deaths): on
+  worker death mid-task the orchestrator CONTINUES the stopped
+  session by its assigned id ("continue: finish per brief") instead
+  of fresh-firing -- context (kept/redid, proof state) survives and
+  nothing re-runs; fresh fire only when the session is unrecoverable.
+  Worker briefs now order commit + push after every numbered item
+  (a death never loses more than one item). Under restarty hosts,
+  background (host-managed) dispatch survives while foreground fires
+  die with the host; `opencode run` stays foreground-only. Also:
+  checker contract documented (five consecutive single-line fields,
+  nothing after `Caveats:` -- bullets between field lines read as
+  malformed), and the green-suite norm for noisy repos is "exit 0 +
+  no NEW error classes vs base". Loop conventions (owner orders
+  shaping the loop) are manifest state under `## Loop conventions`.
+  Patched: skill sec. 4, sec. 5, sec. 6, `scripts/goal-init.ps1`
+  (force-add so gitignored-repo goals still commit their manifest).
+
 - `goal-loop`: free-tier dispatch fix (2026-10-15, proven on a live goal):
   CLI-created custom `-s` session ids trip the free-tier auth gate (empty
   session created, first model call fails with "free tier can only be used
