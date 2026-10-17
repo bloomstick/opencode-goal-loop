@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+- `goal-loop`: staged-evidence sweep (2026-10-17, after the seam re-roll
+  duplicated ~5-8 GPU jobs): gen workers stage attempt evidence at ONE
+  fixed path per REQ (`<goaldir>/staging/<REQ-code>/`, recorded in the
+  Runs record); BEFORE each new attempt they sweep it for prior
+  attempts (prompts/seeds recoverable from PNG workflow chunks), grade
+  them as attempts, never re-run a prompt+seed pair that already
+  produced evidence. Failed-gen evidence lives in staging, not the
+  repo; ledger cites staging paths + hashes.
+
 - `goal-loop`: worker-continuity + crash-proof dispatch (2026-10-17,
   proven on a live goal after four host-restart worker deaths): on
   worker death mid-task the orchestrator CONTINUES the stopped

@@ -309,6 +309,17 @@ restarty hosts, host-managed background subagent dispatch survives
 while foreground fires die with the host; `opencode run` stays
 foreground-only regardless.
 
+STAGED-EVIDENCE SWEEP (user order 2026-10-17, after a rate-limited
+successor burned ~5-8 redundant GPU jobs over a dead predecessor's
+unstaged attempts): generation workers stage attempt evidence at ONE
+FIXED path per REQ — `<goaldir>/staging/<REQ-code>/` recorded in the
+manifest Runs record — and the brief orders: BEFORE each new gen
+attempt, sweep the REQ's staging path for prior attempts (prompts +
+seeds are embedded in PNG workflow chunks — recoverable), grade them
+as attempts, and never re-run a prompt+seed pair that already produced
+evidence. Failed gen evidence lives there, NOT in the repo (repo stays
+clean of rejects); the ledger cites staging paths + hashes.
+
 ## 5. Manifest format (`reqs-manifest.md`)
 
 The manifest is resumable state: everything needed to continue after a
