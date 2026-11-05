@@ -42,6 +42,14 @@
   shaping the loop) are manifest state under `## Loop conventions`.
   Patched: skill sec. 4, sec. 5, sec. 6, `scripts/goal-init.ps1`
   (force-add so gitignored-repo goals still commit their manifest).
+- `goal-loop`: NEVER run orchestrator or worker child agents on local
+  models (`ollama`, `lmstudio`, `vllm`, any OpenAI-compatible local
+  endpoint). New sec. 0 hard rule + sec. 4 dispatch note (never pass
+  `--model`; workers inherit the session model) + standing-orders NEVER
+  entry + `goal-orch` / `goal-worker` lines. Sunset survey sec. 6.6 now
+  marks the global `opencode.json` `agents.explore` / `agents.general`
+  pins to `ollama/gpt-oss-20b-32k` as REMOVE-THE-PINS (provider catalog
+  stays for interactive use).
 
 - `goal-loop`: free-tier dispatch fix (2026-10-15, proven on a live goal):
   CLI-created custom `-s` session ids trip the free-tier auth gate (empty

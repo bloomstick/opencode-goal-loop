@@ -9,7 +9,7 @@ duplicates = DELETE or REPLACE-WITH-POINTER; product code = NOTE only.
 Section key per candidate: Path / What (one line) / Duplicates (goal-loop
 section or none) / Verdict / Risk of acting (what breaks).
 
-Tally: DELETE 6, REPLACE-WITH-POINTER 8, KEEP-WITH-REASON 15, NOTE-only 9.
+Tally: DELETE 6, REPLACE-WITH-POINTER 8, KEEP-WITH-REASON 15, NOTE-only 8, REMOVE-THE-PINS 1.
 
 Heartbeat: noveldream done, orchestrator done, architect done,
 monorepo done, misc done, dispatch-watch done, global done.
@@ -302,7 +302,13 @@ Verdict: NOTE-only (not a candidate; listed to show it was checked).
 Risk: none for this survey.
 
 ### 6.6 Global `opencode.json`
-What: Model/provider config (ollama tiers); no plugin entries.
-Duplicates: none.
-Verdict: NOTE-only (nothing goal-like to strip).
-Risk: none.
+
+What: Model/provider config (ollama tiers) plus `agents.explore` /
+`agents.general` pinned to `ollama/gpt-oss-20b-32k`.
+Duplicates: goal-loop section 0 (bans local models as orch/worker agents).
+Verdict: REMOVE-THE-PINS (keep the ollama provider catalog for interactive
+use; delete the `agents.explore` / `agents.general` model pins so those
+subagents inherit the session model per the agents guide). A pinned local
+model makes every `explore` / `general` dispatch a local-model worker,
+which silently degrades verification.
+Risk: low; unpinning only changes which model those subagents run on.
