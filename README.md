@@ -3,13 +3,14 @@
 Tell OpenCode what you want. Get verified code back. No babysitting, no
 plugins, nothing that can crash the service.
 
-`/goal` turns a task into confirmed requirements, fans them out to child
-agents running in parallel, integrates the results one by one, and verifies
+`/goal-custom` (OpenCode's native `/goal` is separate) turns a task into
+confirmed requirements, fans them out to child agents running in parallel,
+integrates the results one by one, and verifies
 every requirement before reporting DONE. One invocation runs to completion,
 then stops -- no schedules, no watchers, no background state.
 
 ```text
-/goal build a typing practice web app for kids
+/goal-custom build a typing practice web app for kids
 ```
 
 Why no plugin: the service log shows `opencode-goal-plugin@0.11.0`
@@ -25,7 +26,7 @@ Dispatch: the `subagent` tool when available (verified working
 
 ## How it works
 
-`/goal <task>` -> clarify requirements with you (best-guess atomics,
+`/goal-custom <task>` -> clarify requirements with you (best-guess atomics,
 `recommend` accepts all) -> write `reqs-manifest.md` -> map the dependency
 DAG -> dispatch one worktree + branch per worker via `subagent` (fallback:
 foreground `opencode run`; independent requirements in parallel, same-file edits sequential) ->
@@ -60,7 +61,7 @@ Details: `watch/docs/WATCH.md`.
 ```powershell
 .\scripts\Install-GoalLoop.ps1
 # restart OpenCode, then:
-/goal build a typing practice web app for kids
+/goal-custom build a typing practice web app for kids
 ```
 
 The script clones (or pulls) this repo to
@@ -70,7 +71,7 @@ The script clones (or pulls) this repo to
 
 ## Layout (repo = truth source)
 
-- `commands/goal.md` -> global `~/.config/opencode/commands/goal.md` (`/goal`)
+- `commands/goal-custom.md` -> global `~/.config/opencode/commands/goal-custom.md` (`/goal-custom`)
 - `agents/goal-orch.md`, `agents/goal-worker.md` -> global `agents/`
 - `skills/goal-loop/SKILL.md` -> global `skills/goal-loop/` (canonical spec)
 - `scripts/Install-GoalLoop.ps1` -- clone/pull + copy installer

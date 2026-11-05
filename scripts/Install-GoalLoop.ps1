@@ -39,6 +39,8 @@ foreach ($D in @($CmdDir, $AgentDir, $SkillDir)) {
   New-Item -ItemType Directory -Force $D | Out-Null
 }
 
+# Remove the pre-rename command so it cannot shadow OpenCode's native /goal.
+Remove-Item (Join-Path $CmdDir "goal.md") -Force -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $SourceDir "commands/*.md") $CmdDir -Force
 Copy-Item (Join-Path $SourceDir "agents/*.md") $AgentDir -Force
 foreach ($S in (Get-ChildItem (Join-Path $SourceDir "skills") -Directory)) {
@@ -58,4 +60,4 @@ if (Test-Path $OrdersSrc -PathType Leaf) {
   }
 }
 
-Write-Output "DONE: goal-loop installed globally. Restart OpenCode, then run /goal <task>."
+Write-Output "DONE: goal-loop installed globally. Restart OpenCode, then run /goal-custom <task>."

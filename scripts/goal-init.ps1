@@ -7,7 +7,7 @@
     the pending goal dir, i.e. pre-seeded attachments), creates branch
     goal/<slug>, creates the goal dir with prompts/ + attachments/, hashes
     any present attachments into the manifest skeleton, commits + pushes
-    with upstream, and prints a MACHINE block. Entry point: commands/goal.md
+    with upstream, and prints a MACHINE block. Entry point: commands/goal-custom.md
     Step 0. Workers never run this; workers receive NO attachments.
 .PARAMETER Slug
     Goal slug: lowercase letters, digits, hyphens (e.g. my-goal).

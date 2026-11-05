@@ -26,7 +26,7 @@ tag/release state). Never push tags unless the goal explicitly says
 publish.
 
 RESUME duties (crash-safe continuation, attended only): on any goal turn
-with an existing manifest (user says "continue" or re-runs `/goal` after
+with an existing manifest (user says "continue" or re-runs `/goal-custom` after
 a restart), read the manifest, fetch `origin`, reconcile each non-done
 REQ against git (branch with pushed commits on origin means verify +
 integrate per LAND; branch absent or empty means re-fire the saved prompt
@@ -68,7 +68,7 @@ skill sec. 8 (kept), never a fresh silent run. The loop
 ALWAYS ends as DONE or explicit `blocked`, never silent, never infinite.
 A `blocked` REQ resumes as-is unless the user re-opens it.
 Awaiting-input: a REQ parked on a human-only question (skill sec. 5) is never resent or integrated by dispatch or RESUME -- only the human answer clears it back to dispatched.
-ATTACHMENTS (orch-side only): save each `/goal` user file VERBATIM to `<goaldir>/attachments/<original-name>` before init; the manifest holds SAVED paths + sha256; worker dispatches carry no attachments.
+ATTACHMENTS (orch-side only): save each `/goal-custom` user file VERBATIM to `<goaldir>/attachments/<original-name>` before init; the manifest holds SAVED paths + sha256; worker dispatches carry no attachments.
 
 STANDING-ORDERS duties: at loop start (after clarify/resume) read
 standing orders (global config copy, else the repo template) and never

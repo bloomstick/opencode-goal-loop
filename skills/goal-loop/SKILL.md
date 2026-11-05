@@ -1,6 +1,6 @@
 ---
 name: goal-loop
-description: Fully automated coding loop for OpenCode without plugins. Use when asked to run /goal, drive requirements-to-verified-code with child agents via subagent tool or foreground opencode run, or replace crash-prone goal plugins.
+description: Fully automated coding loop for OpenCode without plugins. Use when asked to run /goal-custom, drive requirements-to-verified-code with child agents via subagent tool or foreground opencode run, or replace crash-prone goal plugins.
 ---
 
 # goal-loop - automated coding loop with child agents, no plugins
@@ -27,7 +27,7 @@ foreground `opencode run` processes per sec. 4, never background.
 - NEVER run `opencode run` in background (`shell` `background: true`,
   `Start-Job` holding it server-side, `&`, `nohup`). Foreground only.
 - NEVER add schedules, services, watchers, polling loops, idle hooks, or
-  background persistence. Attended loop only: one `/goal` invocation runs
+  background persistence. Attended loop only: one `/goal-custom` invocation runs
   to DONE, then stops. No timers survive the session.
 - NEVER write plugin state with locks/leases/claims (the old
   `.opencode/goals/state.json.lock*` system). Goal state is one plain
@@ -47,7 +47,7 @@ foreground `opencode run` processes per sec. 4, never background.
 
 ## 1. When to use
 
-- `/goal <task>` — user wants requirements-to-verified-code, hands-off.
+- `/goal-custom <task>` — user wants requirements-to-verified-code, hands-off.
 - 2+ independent file-disjoint requirements — fan out to child agents.
 - Single requirement — run it as one child agent, same protocol.
 - Do NOT use for open-ended chat, or for same-file edits in parallel
@@ -55,7 +55,7 @@ foreground `opencode run` processes per sec. 4, never background.
 
 ## 2. Orchestrator loop (goal-orch, primary agent)
 
-Termination guarantee: every `/goal` invocation ends in the same
+Termination guarantee: every `/goal-custom` invocation ends in the same
 invocation as DONE (all REQs `done` + sec. 7 proof), explicit
 `blocked` (sec. 6 blocked report), or parked on `awaiting-input`
 (sec. 5: report names the REQ + pending question, then stop).
@@ -68,7 +68,7 @@ sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
 1. **Clarify / Resume.** If a manifest already exists for the goal
    (`.opencode/goal-loop/<slug>/reqs-manifest.md` - including the first
    message after a restart, where the user says "continue" or re-runs
-   `/goal`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
+   `/goal-custom`), do NOT re-clarify: run the RESUME rule (see sec. 8) first
    and continue from the first non-done, non-blocked, non-awaiting REQ
    (`blocked` counts as blocked; `awaiting-input`
    counts as parked per sec. 5). Only clarify a fresh goal
@@ -88,9 +88,9 @@ sec. 2 step 5, `resends: <n>/10`). Terminal paths are: (a) all-done,
    by `Install-GoalLoop.ps1`, falling back to the repo
    `standing-orders.md` template) and never gate on a listed power
    again; anything outside the list still asks. Step 0 first
-   (commands/goal.md): run scripts/goal-init.ps1 and quote its MACHINE
+   (commands/goal-custom.md): run scripts/goal-init.ps1 and quote its MACHINE
    block; STOP on failure. Attachments (orch-side only): save each
-   `/goal` user-attached file VERBATIM to
+   `/goal-custom` user-attached file VERBATIM to
    `<goaldir>/attachments/<original-name>` before the init call (only the
    orchestrator ever sees the content); the manifest Attachments block
    holds SAVED paths + sha256 (sec. 5). Clarify-check: if the user
@@ -530,7 +530,7 @@ polling, idle hooks, unattended retries, or background work). In-turn resends st
 per sec. 2 step 5 only; a restart that kills a turn mid-loop resumes
 here, and only here, from the pushed Runs record (`resends: <n>/10`
 carries over). RESUME runs only on a human goal
-turn ("continue" or a re-run of `/goal`) when a manifest exists. One
+turn ("continue" or a re-run of `/goal-custom`) when a manifest exists. One
 invocation still ends at DONE or `blocked`, or at the next human turn
 with work still in flight; nothing keeps running
 after that.

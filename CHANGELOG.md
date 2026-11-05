@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+- `goal-loop`: renamed the custom `/goal` command to `/goal-custom`
+  (2026-11-05) because OpenCode now ships a native `/goal`; a user
+  `commands/goal.md` would shadow it. The installer removes the stale
+  `commands/goal.md` copy on update.
+
 - `goal-loop`: abandon-is-not-stop (2026-10-17, proven live): an
   abandoned session keeps running its queued turns — "stop reconnecting"
   is NOT a kill; two workers end up racing one worktree. THE KILL PATH
